@@ -20,6 +20,7 @@ int main(int argc, const char** argv)
   int frameCnt = videoSource.get(CV_CAP_PROP_FRAME_COUNT);
   std::cout<< frameCnt;
   vector<Mat> frames;
+  Mat save_image;
   for(int i=1; i <= frameCnt; i++)
   {
     videoSource >> frame;
@@ -29,6 +30,10 @@ int main(int argc, const char** argv)
     }
     frames.push_back(frame);
     //imshow("output", frame);
+    if(i==100){
+      imwrite("sample.jpg", frame);
+      break;
+    }
   }
   imshow("output", frames.back());
   waitKey(10000);
