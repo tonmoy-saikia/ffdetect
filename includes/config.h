@@ -4,7 +4,10 @@
 namespace config
 {
   extern float SCALE_FACTOR;
-  extern std::string config_str;
+  extern std::string HAARCASCADE_FACE;
+  extern std::string HAARCASCADE_MOUTH;
+  extern std::string HAARCASCADE_NOSE;
+  extern std::string HAARCASCADE_EYES;
   bool load_config_file();
 }
 
