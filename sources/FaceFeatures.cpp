@@ -5,7 +5,7 @@
 std::vector<cv::Rect> Base::detect(cv::Mat img, cv::Size min_size)
 {
   std::vector<cv::Rect> detectedObj;
-  classifier.detectMultiScale(img, detectedObj, 1.1 , 1, CV_HAAR_SCALE_IMAGE, min_size);
+  classifier.detectMultiScale(img, detectedObj, config::SCALE_FACTOR,1,CV_HAAR_SCALE_IMAGE, min_size);
   return detectedObj;
 }
 

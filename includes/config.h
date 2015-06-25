@@ -9,6 +9,7 @@ namespace config
   extern std::string HAARCASCADE_NOSE;
   extern std::string HAARCASCADE_EYES;
   bool load_config_file();
+  void load_variable(std::string, std::string);
 }
-
+std::string trim_string(std::string);
 #endif
