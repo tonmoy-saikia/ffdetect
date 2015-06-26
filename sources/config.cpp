@@ -8,19 +8,19 @@
 
 namespace config
 {
+  //Default config values go here
   float SCALE_FACTOR = 1.1;
-  std::string HAARCASCADE_FACE = "/home/tonmoy/opencv/opencv-2.4.10/data/haarcascades/haarcascade_frontalface_alt2.xml";
-  std::string HAARCASCADE_MOUTH = "/home/tonmoy/opencv/opencv-2.4.10/data/haarcascades/haarcascade_mcs_mouth.xml";
-  std::string HAARCASCADE_NOSE = "/home/tonmoy/opencv/opencv-2.4.10/data/haarcascades/haarcascade_mcs_nose.xml";
-  std::string HAARCASCADE_EYES = "/home/tonmoy/opencv/opencv-2.4.10/data/haarcascades/haarcascade_mcs_eyepair_big.xml";
-  //std::string HAARCASCADE_EYES = "/home/tonmoy/opencv/opencv-2.4.10/data/haarcascades/haarcascade_eye_tree_eyeglasses.xml";
+  std::string HAARCASCADE_EYES;
+  std::string HAARCASCADE_MOUTH;
+  std::string HAARCASCADE_NOSE;
+  std::string HAARCASCADE_FACE;
 }
 
 bool config::load_config_file()
 {
   std::ifstream in_stream;
   std::string str;
-  in_stream.open("/home/tonmoy/my_repo/ffdetect/config/init");
+  in_stream.open("/home/tonmoy/my_repo/ffdetect/config/init");//config file loc
   while(!in_stream.eof())
   {
     while(std::getline(in_stream, str))
@@ -48,6 +48,14 @@ void config::load_variable(std::string key, std::string value)
 {
   if(key == "SCALE_FACTOR")
     SCALE_FACTOR = ::atof(value.c_str());
+  if(key == "HAARCASCADE_FACE")
+    HAARCASCADE_FACE = value;
+  if(key == "HAARCASCADE_MOUTH")
+    HAARCASCADE_MOUTH = value;
+  if(key == "HAARCASCADE_NOSE")
+    HAARCASCADE_NOSE = value;
+  if(key == "HAARCASCADE_EYES")
+    HAARCASCADE_EYES = value;
 }
 
 std::string trim_string(std::string str)

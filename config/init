@@ -1,8 +1,11 @@
+#Various viola jones detection parameters
 SCALE_FACTOR=1.2
 
 
-Test=test
-Test =test
-Test= test
-#this is comment
-Test =    test
+#Haar cascade file locations
+HAARCASCADE_FACE = /home/tonmoy/opencv/opencv-2.4.10/data/haarcascades/haarcascade_frontalface_alt2.xml
+HAARCASCADE_MOUTH = /home/tonmoy/opencv/opencv-2.4.10/data/haarcascades/haarcascade_mcs_mouth.xml
+HAARCASCADE_NOSE = /home/tonmoy/opencv/opencv-2.4.10/data/haarcascades/haarcascade_mcs_nose.xml
+HAARCASCADE_EYES = /home/tonmoy/opencv/opencv-2.4.10/data/haarcascades/haarcascade_mcs_eyepair_big.xml
+#HAARCASCADE_EYES = "/home/tonmoy/opencv/opencv-2.4.10/data/haarcascades/haarcascade_eye_tree_eyeglasses.xml"
+
