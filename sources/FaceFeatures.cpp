@@ -2,11 +2,19 @@
 #include "../includes/common.h"
 
 
-std::vector<cv::Rect> Base::detect(cv::Mat img, cv::Size min_size)
+void Base::detect(cv::Mat img, cv::Size min_size)
 {
-  std::vector<cv::Rect> detectedObj;
-  classifier.detectMultiScale(img, detectedObj, config::SCALE_FACTOR,1,CV_HAAR_SCALE_IMAGE, min_size);
-  return detectedObj;
+  classifier.detectMultiScale(img, rects, config::SCALE_FACTOR, 1,CV_HAAR_SCALE_IMAGE, min_size);
+}
+
+bool Base::detected()
+{
+  return rects.size()>0;
+}
+
+cv::Rect Base::getRect()
+{
+  return rects[0];
 }
 
 Face::Face()

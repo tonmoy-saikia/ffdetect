@@ -4,8 +4,11 @@ class Base
 {
 protected:
   cv::CascadeClassifier classifier;
+  std::vector<cv::Rect> rects;
 public:
-  std::vector<cv::Rect> detect(cv::Mat im, cv::Size min_size);
+  bool detected();
+  void detect(cv::Mat im, cv::Size min_size);
+  cv::Rect getRect();
 };
 
 class Face: public Base
