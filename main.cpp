@@ -1,5 +1,6 @@
 #include "includes/common.h"
 #include "includes/FaceFeatures.h"
+#include "includes/CSVLogger.h"
 #include <stdexcept>
 #include <fstream>
 
@@ -12,15 +13,19 @@ void printMarkerLocation(cv::Rect, cv::Point, std::string);
 //cv::Mat getEyesROI(cv::Rect frect, cv::Mat face);
 //cv::Mat getNoseROI(cv::Mat face);
 
-int main1(int argc, const char** argv)
+int main(int argc, const char** argv)
 {
-  config::load_config_file();
-  cv::CascadeClassifier c;
-  //c.load("/home/tonmoy/opencv/opencv-2.4.10/data/haarcascades/haarcascade_frontalface_alt2.xml");
-  c.load(config::HAARCASCADE_FACE);
-  cv::Mat image, grayImage;
-  cv::Point p;
-  std::cout<< p;
+  CSVLogger c("test1");
+  c.newRow();
+  c.addToRow("frame_no", "11");
+  c.flush();
+ /* config::load_config_file();*/
+  //cv::CascadeClassifier c;
+  ////c.load("/home/tonmoy/opencv/opencv-2.4.10/data/haarcascades/haarcascade_frontalface_alt2.xml");
+  //c.load(config::HAARCASCADE_FACE);
+  //cv::Mat image, grayImage;
+  //cv::Point p;
+  /*std::cout<< p;*/
   /* image = cv::imread(argv[1], CV_LOAD_IMAGE_COLOR);*/
   //cvtColor(image, grayImage, CV_BGR2GRAY);
   //equalizeHist(grayImage, grayImage);
@@ -42,7 +47,7 @@ int main1(int argc, const char** argv)
   return 0;
 }
 
-int main(int argc, const char** argv)
+int main1(int argc, const char** argv)
 {
   if( argc != 2)
   {
