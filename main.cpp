@@ -1,19 +1,12 @@
 #include "includes/common.h"
 #include "includes/FaceFeatures.h"
 #include "includes/CSVLogger.h"
-#include <stdexcept>
+#include "includes/Utils.h"
 #include <fstream>
 
-cv::Rect extendRectangle(cv::Mat image, cv::Rect origRect, cv::Rect subRect);
-cv::Point locateMarker(cv::Mat clrImg);
 void detect(cv::Mat img);
-cv::Point getGlobalMarkerPos(cv::Point lpos, cv::Rect lrect);
-cv::Rect getROI(cv::Rect frect, char type);
-void printMarkerLocation(cv::Rect, cv::Point, std::string);
-//cv::Mat getEyesROI(cv::Rect frect, cv::Mat face);
-//cv::Mat getNoseROI(cv::Mat face);
 
-int main(int argc, const char** argv)
+int main1(int argc, const char** argv)
 {
   CSVLogger c("test1");
   c.newRow();
@@ -47,7 +40,8 @@ int main(int argc, const char** argv)
   return 0;
 }
 
-int main1(int argc, const char** argv)
+CSVLogger logger("test1");
+int main(int argc, const char** argv)
 {
   if( argc != 2)
   {
@@ -56,81 +50,13 @@ int main1(int argc, const char** argv)
   }
   cv::Mat image = cv::imread(argv[1], CV_LOAD_IMAGE_COLOR);
   config::load_config_file();//initialize config variables
+  logger.newRow();
+  logger.addToRow("frame_no", "11");
   detect(image);
+  logger.flush();
   return 0;
 }
 
-cv::Rect extendRectangle(cv::Mat image, cv::Rect origRect, cv::Rect subRect)
-{
-  cv::Point pt1(origRect.x + subRect.x, origRect.y + subRect.y);
-  cv::Point pt2(pt1.x + subRect.width, pt1.y + subRect.height);
-  rectangle(image, pt1, pt2, cv::Scalar(255,0,0),1,8,0);
-  return cv::Rect(pt1,pt2);
-}
-
-cv::Point locateMarker(cv::Mat clrImg)
-{
-  cv::Mat bgIsolation;
-  cv::Point mCoord;
-  //cvtColor(clrImg, imgHSV, cv::COLOR_BGR2HSV);//no hsv for now
-  int rh = 255, rl = 100, gh = 255, gl = 0, bh = 70, bl = 0;
-  cv::inRange(clrImg, cv::Scalar(bl, gl, rl), cv::Scalar(bh, gh, rh), bgIsolation);
-  cv::Moments oMoments = cv::moments(bgIsolation);
-  double dM01 = oMoments.m01;
-  double dM10 = oMoments.m10;
-  double dArea = oMoments.m00;
-  if(dArea > 0)
-  {
-    mCoord.x = dM10 / dArea;
-    mCoord.y = dM01 / dArea;
-  }
-  return mCoord;
-}
-
-cv::Point getGlobalMarkerPos(cv::Point lpos, cv::Rect r)
-{
-  return cv::Point(lpos.x + r.x, lpos.y + r.y);
-}
-
-cv::Rect getROI(cv::Rect frect, char type)
-{
-  cv::Rect rect;
-  if(type == 'm')
-  {
-    rect = cv::Rect(frect.x,
-        (int)(frect.y + frect.height*0.6666),
-        frect.width,
-        (int)(frect.height/3));
-  }
-  else if(type == 'n')
-  {
-
-    rect = cv::Rect(frect.x,
-        (int)(frect.y + frect.height*0.3),
-        frect.width,
-        (int)(frect.height*0.666));
-  }
-  else if(type == 'e')
-  {
-    rect = cv::Rect(frect.x,
-        (int)(frect.y + frect.height*0.1),
-        frect.width,
-        (int)(frect.height/2));
-  }
-  else
-  {
-    throw std::invalid_argument("Invalid type for roi. Valid types are m,n,e");
-  }
-  return rect;
-}
-
-void printMarkerLocation(cv::Rect rect, cv::Point loc, std::string type)
-{
-  if(rect.contains(loc))
-  {
-    std::cout<< "Marker in "<<type << "\n";
-  }
-}
 void detect(cv::Mat image)
 {
   Face f; Nose n; Eyes e; Mouth m;
@@ -144,46 +70,46 @@ void detect(cv::Mat image)
     rectangle(image, faceRect, cv::Scalar(0,255,0),1,8,0);
 
     cv::Mat faceROI = image(faceRect);// need th color info locating marker
-    cv::Point markerPos = locateMarker(faceROI);
+    cv::Point markerPos = Utils::locateMarker(faceROI);
     if(markerPos.x==0 && markerPos.y==0)
     {
       std::cerr<< "Marker not found!";
     }
     else
     {
-      cv::Point markerPosGlobal = getGlobalMarkerPos(markerPos, faceRect);
+      cv::Point markerPosGlobal = Utils::getGlobalMarkerPos(markerPos, faceRect);
       circle(image, markerPosGlobal, 3 , cv::Scalar( 252, 22, 120 ), -1, 8);
       //std::cout << markerPosGlobal;
       //cvtColor(faceROI, faceROI, CV_BGR2GRAY);
 
       // detect nose
       //getROI(grayImage, faceRect, 'n');
-      cv::Rect noseROIrect = getROI(faceRect, 'n');
+      cv::Rect noseROIrect = Utils::getROI(faceRect, 'n');
       n.detect(grayImage(noseROIrect), cv::Size(40,40));
       if(n.detected())
       {
         //extendRectangle(image, noseROIrect, n.getRect());
-        printMarkerLocation(extendRectangle(image, noseROIrect, n.getRect()),markerPos,"nose");
+        Utils::printMarkerLocation(Utils::extendRectangle(image, noseROIrect, n.getRect()),markerPos,"nose");
       }
 
       //detect mouth
-      cv::Rect mouthROIrect = getROI(faceRect, 'm');
+      cv::Rect mouthROIrect = Utils::getROI(faceRect, 'm');
       m.detect(grayImage(mouthROIrect), cv::Size(40,40));
       if(m.detected())
       {
         //extendRectangle(image, mouthROIrect, m.getRect());
-        printMarkerLocation(extendRectangle(image, mouthROIrect, m.getRect()),markerPos,"mouth");
+        Utils::printMarkerLocation(Utils::extendRectangle(image, mouthROIrect, m.getRect()),markerPos,"mouth");
       }
 
       //detect eyes
-      cv::Rect eyeROIrect = getROI(faceRect, 'e');
+      cv::Rect eyeROIrect = Utils::getROI(faceRect, 'e');
       e.detect(grayImage(eyeROIrect), cv::Size(30,30));
       if(e.detected())
       {
         //extendRectangle(image, eyeROIrect, e.getRect());
         //std::cout<< e.getRect() << std::endl;
         //std::cout<< markerPos;
-        printMarkerLocation(extendRectangle(image, eyeROIrect, e.getRect()), markerPosGlobal,"eye");
+        Utils::printMarkerLocation(Utils::extendRectangle(image, eyeROIrect, e.getRect()), markerPosGlobal,"eye");
       }
     }
   }
