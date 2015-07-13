@@ -12,5 +12,7 @@ class CSVLogger
     CSVLogger(const char*);
     void newRow();
     void addToRow(std::string key, std::string value);
+    void addToRow(std::string rectType, cv::Rect value);
+    void addToRow(cv::Point p);
     void flush();
 };
