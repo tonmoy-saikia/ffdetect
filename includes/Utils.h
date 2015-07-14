@@ -11,5 +11,6 @@ namespace Utils
   cv::Rect getROI(cv::Rect frect, char type);
   std::string toString(int);
   void printMarkerLocation(cv::Rect rect, cv::Point loc, std::string type);
+  std::string getMarkerLocation(cv::Rect, cv::Rect, cv::Rect, cv::Point);
 }
 #endif

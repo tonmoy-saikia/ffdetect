@@ -79,29 +79,30 @@ void detect(cv::Mat image)
     else
     {
       cv::Point markerPosGlobal = Utils::getGlobalMarkerPos(markerPos, faceRect);
-      circle(image, markerPosGlobal, 3 , cv::Scalar( 252, 22, 120 ), -1, 8);
-      //std::cout << markerPosGlobal;
-      //cvtColor(faceROI, faceROI, CV_BGR2GRAY);
-
-      // detect nose
-      //getROI(grayImage, faceRect, 'n');
-      cv::Rect noseROIrect = Utils::getROI(faceRect, 'n');
-      n.detect(grayImage(noseROIrect), cv::Size(40,40));
+      logger.addToRow(markerPosGlobal);
+      //circle(image, markerPosGlobal, 3 , cv::Scalar( 252, 22, 120 ), -1, 8);//locate marker
+      //detect nose
+      cv::Rect noseROIrect = Utils::getROI(faceRect,'n');
+      n.detect(grayImage(noseROIrect), cv::Size(40, 40));
+      //note: probably need some exception handling if marker is found in more than one rects.
+      //which probably will not happen :/
       if(n.detected())
       {
         cv::Rect nROI = Utils::extendRectangle(image, noseROIrect, n.getRect());
         logger.addToRow("nose", nROI);
-        Utils::printMarkerLocation(nROI, markerPos, "nose");
+        if(nROI.contains(markerPosGlobal))
+          logger.addToRow("marker_loc", "n");
       }
 
       //detect mouth
       cv::Rect mouthROIrect = Utils::getROI(faceRect, 'm');
-      m.detect(grayImage(mouthROIrect), cv::Size(40,40));
+      m.detect(grayImage(mouthROIrect), cv::Size(40, 40));
       if(m.detected())
       {
         cv::Rect mROI = Utils::extendRectangle(image, mouthROIrect, m.getRect());
         logger.addToRow("mouth", mROI);
-        Utils::printMarkerLocation(mROI, markerPos, "mouth");
+        if(mROI.contains(markerPosGlobal))
+          logger.addToRow("marker_loc", "m");
       }
 
       //detect eyes
@@ -111,7 +112,8 @@ void detect(cv::Mat image)
       {
         cv::Rect eROI = Utils::extendRectangle(image, eyeROIrect, e.getRect());
         logger.addToRow("eye", eROI);
-        Utils::printMarkerLocation(eROI, markerPosGlobal, "eye");
+        if(eROI.contains(markerPosGlobal))
+          logger.addToRow("marker_loc", "e");
       }
     }
   }
@@ -120,7 +122,7 @@ void detect(cv::Mat image)
     std::cerr<< "0 or more than one faces found...skipping frame!"<<std::endl;
   }
 
-  namedWindow( "Display window", cv::WINDOW_AUTOSIZE );
-  imshow("Display window", image);
-  cv::waitKey(0);
+  /*namedWindow( "Display window", cv::WINDOW_AUTOSIZE );*/
+  //imshow("Display window", image);
+  /*cv::waitKey(0);*/
 }

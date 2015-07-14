@@ -5,32 +5,38 @@
 CSVLogger::CSVLogger(const char* filename)
 {
   fobj.open(filename);
+  set_header_order();
   create_default_row();
+}
+void CSVLogger::set_header_order()
+{
+  header_order.push_back("frame_no");
+  header_order.push_back("seek_time");
+  header_order.push_back("face_rect_x");
+  header_order.push_back("face_rect_y");
+  header_order.push_back("face_rect_w");
+  header_order.push_back("face_rect_h");
+  header_order.push_back("eye_rect_x");
+  header_order.push_back("eye_rect_y");
+  header_order.push_back("eye_rect_w");
+  header_order.push_back("eye_rect_h");
+  header_order.push_back("nose_rect_x");
+  header_order.push_back("nose_rect_y");
+  header_order.push_back("nose_rect_w");
+  header_order.push_back("nose_rect_h");
+  header_order.push_back("mouth_rect_x");
+  header_order.push_back("mouth_rect_y");
+  header_order.push_back("mouth_rect_w");
+  header_order.push_back("mouth_rect_h");
+  header_order.push_back("marker_loc");
+  header_order.push_back("marker_coord_x");
+  header_order.push_back("marker_coord_y");
 }
 
 void CSVLogger::create_default_row()
 {
-  default_row["frame_no"]="";
-  default_row["seek_time"]="";
-  default_row["face_rect_x"]="";
-  default_row["face_rect_y"]="";
-  default_row["face_rect_w"]="";
-  default_row["face_rect_h"]="";
-  default_row["eye_rect_x"]="";
-  default_row["eye_rect_y"]="";
-  default_row["eye_rect_w"]="";
-  default_row["eye_rect_h"]="";
-  default_row["nose_rect_x"]="";
-  default_row["nose_rect_y"]="";
-  default_row["nose_rect_w"]="";
-  default_row["nose_rect_h"]="";
-  default_row["mouth_rect_x"]="";
-  default_row["mouth_rect_y"]="";
-  default_row["mouth_rect_w"]="";
-  default_row["mouth_rect_h"]="";
-  default_row["marker_loc"]="";
-  default_row["marker_coord_x"]="";
-  default_row["marker_coord_y"]="";
+  for(int i=0; i<header_order.size(); i++)
+    default_row[header_order[i]] = "";
 }
 
 void CSVLogger::newRow()
@@ -64,14 +70,14 @@ void CSVLogger::addToRow(std::string rType, cv::Rect value)
 {
   std::vector<std::string> rectTypes;
   rectTypes.push_back("face"); rectTypes.push_back("nose");
-  rectTypes.push_back("mouth"); rectTypes.push_back("eyes");
+  rectTypes.push_back("mouth"); rectTypes.push_back("eye");
   std::vector<std::string>::iterator it = std::find(rectTypes.begin(), rectTypes.end(), rType);
   if(it != rectTypes.end())
   {
     addToRow(*it + "_rect_x", Utils::toString(value.x));
-    addToRow(*it + "_rect_y", Utils::toString(value.x));
-    addToRow(*it + "_rect_w", Utils::toString(value.x));
-    addToRow(*it + "_rect_h", Utils::toString(value.x));
+    addToRow(*it + "_rect_y", Utils::toString(value.y));
+    addToRow(*it + "_rect_w", Utils::toString(value.width));
+    addToRow(*it + "_rect_h", Utils::toString(value.height));
   }
   else
   {
@@ -82,13 +88,19 @@ void CSVLogger::addToRow(std::string rType, cv::Rect value)
 void CSVLogger::flush()
 {
   std::string val, out_str;
-  for (int i=0; i<rows.size();i++)
+  for(int i=0; i<=rows.size(); i++)
   {
-    std::map<std::string, std::string> row = rows[i];
-    for(std::map<std::string, std::string>::iterator iter = row.begin(); iter!=row.end(); ++iter)
+    for(int j=0; j<header_order.size(); j++)
     {
-      val = iter->second;
-      if(iter == row.begin())
+      if(i>0)
+      {
+        val = rows[i-1][header_order[j]];
+      }
+      else
+      {
+        val = header_order[j];
+      }
+      if(j==0)
       {
         out_str.append(val);
       }
@@ -100,6 +112,7 @@ void CSVLogger::flush()
     }
     out_str.append("\n");
     fobj << out_str;
+    out_str ="";
   }
   fobj.close();
 }
