@@ -5,6 +5,21 @@
 #include <fstream>
 
 void detect(cv::Mat img);
+void process_frame(int frame, cv::Mat img);//todo add timestamp
+char* getCmdOption(char ** begin, char ** end, const std::string & option)
+{
+  char ** itr = std::find(begin, end, option);
+  if (itr != end && ++itr != end)
+  {
+    return *itr;
+  }
+  return 0;
+}
+
+bool cmdOptionExists(char** begin, char** end, const std::string& option)
+{
+  return std::find(begin, end, option) != end;
+}
 
 int main1(int argc, const char** argv)
 {
@@ -12,7 +27,7 @@ int main1(int argc, const char** argv)
   c.newRow();
   c.addToRow("frame_no", "11");
   c.flush();
- /* config::load_config_file();*/
+  /* config::load_config_file();*/
   //cv::CascadeClassifier c;
   ////c.load("/home/tonmoy/opencv/opencv-2.4.10/data/haarcascades/haarcascade_frontalface_alt2.xml");
   //c.load(config::HAARCASCADE_FACE);
@@ -41,20 +56,51 @@ int main1(int argc, const char** argv)
 }
 
 CSVLogger logger("test1");
-int main(int argc, const char** argv)
+int main(int argc, char** argv)
 {
-  if( argc != 2)
-  {
-    std::cout <<" Usage: display_image ImageToLoadAndDisplay" << std::endl;
-    return -1;
-  }
-  cv::Mat image = cv::imread(argv[1], CV_LOAD_IMAGE_COLOR);
   config::load_config_file();//initialize config variables
-  logger.newRow();
-  logger.addToRow("frame_no", "11");
-  detect(image);
+  cv::Mat frame;
+  if(cmdOptionExists(argv, argv+argc, "-i"))
+  {
+    char * filename = getCmdOption(argv, argv + argc, "-i");
+    frame = cv::imread(filename, CV_LOAD_IMAGE_COLOR);
+    process_frame(1, frame);
+  }
+  else if(cmdOptionExists(argv, argv+argc, "-v"))
+  {
+    char * filename = getCmdOption(argv, argv + argc, "-v");
+    cv::VideoCapture videoSource;
+    if(!videoSource.open(filename))
+      exit(-1);
+    videoSource.set(CV_CAP_PROP_CONVERT_RGB, 1);
+    int frameCnt = videoSource.get(CV_CAP_PROP_FRAME_COUNT);
+    for(int i=1; i <= frameCnt; i++)
+    {
+      videoSource >> frame;
+      if(i>300 && !frame.empty())
+      {
+        process_frame(i,frame);
+      }
+      if(i==339)
+      {
+        imwrite("sample11.jpg", frame);
+        break;
+      }
+    }
+  }
+  else
+  {
+    std::cerr << "Invalid option" << std::endl;
+  }
   logger.flush();
   return 0;
+}
+
+void process_frame(int frame, cv::Mat img)
+{
+  logger.newRow();
+  logger.addToRow("frame_no", Utils::toString(frame));
+  detect(img);
 }
 
 void detect(cv::Mat image)
@@ -69,7 +115,7 @@ void detect(cv::Mat image)
     cv::Rect faceRect = f.getRect();
     //draw rectangle around face
     logger.addToRow("face", faceRect);
-    rectangle(image, faceRect, cv::Scalar(0,255,0),1,8,0);
+    //rectangle(image, faceRect, cv::Scalar(0,255,0),1,8,0);
 
     cv::Mat faceROI = image(faceRect);// need th color info locating marker
     cv::Point markerPos = Utils::locateMarker(faceROI);
@@ -89,7 +135,7 @@ void detect(cv::Mat image)
       if(m.detected())
       {
         mROI = Utils::extendRectangle(mouthROIrect, m.getRect());
-        rectangle(image, mROI, cv::Scalar(255,0,0),1,8,0);
+        //rectangle(image, mROI, cv::Scalar(255,0,0),1,8,0);
         logger.addToRow("mouth", mROI);
         if(mROI.contains(markerPosGlobal))
           logger.addToRow("marker_loc", "m");
@@ -101,7 +147,7 @@ void detect(cv::Mat image)
       if(e.detected())
       {
         eROI = Utils::extendRectangle(eyeROIrect, e.getRect());
-        rectangle(image, eROI, cv::Scalar(255,0,0),1,8,0);
+        //rectangle(image, eROI, cv::Scalar(255,0,0),1,8,0);
         logger.addToRow("eye", eROI);
         if(eROI.contains(markerPosGlobal))
           logger.addToRow("marker_loc", "e");
@@ -119,7 +165,7 @@ void detect(cv::Mat image)
           Utils::trimNRectE(nROI, eROI);
         if(m.detected())
           Utils::trimNRectM(nROI, mROI);
-        rectangle(image, nROI, cv::Scalar(255,0,0),1,8,0);
+        //rectangle(image, nROI, cv::Scalar(255,0,0),1,8,0);
         logger.addToRow("nose", nROI);
         if(nROI.contains(markerPosGlobal))
           logger.addToRow("marker_loc", "n");
@@ -131,7 +177,7 @@ void detect(cv::Mat image)
     std::cerr<< "0 or more than one faces found...skipping frame!"<<std::endl;
   }
 
-  namedWindow( "Display window", cv::WINDOW_AUTOSIZE );
-  imshow("Display window", image);
-  cv::waitKey(0);
+  //namedWindow( "Display window", cv::WINDOW_AUTOSIZE );
+  //imshow("Display window", image);
+  //cv::waitKey(0);
 }
