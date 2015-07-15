@@ -1,9 +1,8 @@
 #include "../includes/Utils.h"
-cv::Rect Utils::extendRectangle(cv::Mat image, cv::Rect origRect, cv::Rect subRect)
+cv::Rect Utils::extendRectangle(cv::Rect origRect, cv::Rect subRect)
 {
   cv::Point pt1(origRect.x + subRect.x, origRect.y + subRect.y);
   cv::Point pt2(pt1.x + subRect.width, pt1.y + subRect.height);
-  rectangle(image, pt1, pt2, cv::Scalar(255,0,0),1,8,0);
   return cv::Rect(pt1,pt2);
 }
 
@@ -77,3 +76,14 @@ void Utils::printMarkerLocation(cv::Rect rect, cv::Point loc, std::string type)
   }
 }
 
+void Utils::trimNRectE(cv::Rect &nROI, cv::Rect eROI)
+{
+  int offset = 1;
+  nROI.y = eROI.y + eROI.height + offset;
+}
+
+void Utils::trimNRectM(cv::Rect &nROI, cv::Rect mROI)
+{
+  int offset = 1;
+  nROI.height = mROI.y - nROI.y - offset;
+}

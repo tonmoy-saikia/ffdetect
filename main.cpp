@@ -65,6 +65,7 @@ void detect(cv::Mat image)
   equalizeHist(grayImage,equalized);
   f.detect(equalized, cv::Size(100,100));
   if(f.detected()){
+    cv::Rect nROI, eROI, mROI;
     cv::Rect faceRect = f.getRect();
     //draw rectangle around face
     logger.addToRow("face", faceRect);
@@ -81,25 +82,14 @@ void detect(cv::Mat image)
       cv::Point markerPosGlobal = Utils::getGlobalMarkerPos(markerPos, faceRect);
       logger.addToRow(markerPosGlobal);
       //circle(image, markerPosGlobal, 3 , cv::Scalar( 252, 22, 120 ), -1, 8);//locate marker
-      //detect nose
-      cv::Rect noseROIrect = Utils::getROI(faceRect,'n');
-      n.detect(grayImage(noseROIrect), cv::Size(40, 40));
-      //note: probably need some exception handling if marker is found in more than one rects.
-      //which probably will not happen :/
-      if(n.detected())
-      {
-        cv::Rect nROI = Utils::extendRectangle(image, noseROIrect, n.getRect());
-        logger.addToRow("nose", nROI);
-        if(nROI.contains(markerPosGlobal))
-          logger.addToRow("marker_loc", "n");
-      }
 
       //detect mouth
       cv::Rect mouthROIrect = Utils::getROI(faceRect, 'm');
       m.detect(grayImage(mouthROIrect), cv::Size(40, 40));
       if(m.detected())
       {
-        cv::Rect mROI = Utils::extendRectangle(image, mouthROIrect, m.getRect());
+        mROI = Utils::extendRectangle(mouthROIrect, m.getRect());
+        rectangle(image, mROI, cv::Scalar(255,0,0),1,8,0);
         logger.addToRow("mouth", mROI);
         if(mROI.contains(markerPosGlobal))
           logger.addToRow("marker_loc", "m");
@@ -110,10 +100,29 @@ void detect(cv::Mat image)
       e.detect(grayImage(eyeROIrect), cv::Size(30,30));
       if(e.detected())
       {
-        cv::Rect eROI = Utils::extendRectangle(image, eyeROIrect, e.getRect());
+        eROI = Utils::extendRectangle(eyeROIrect, e.getRect());
+        rectangle(image, eROI, cv::Scalar(255,0,0),1,8,0);
         logger.addToRow("eye", eROI);
         if(eROI.contains(markerPosGlobal))
           logger.addToRow("marker_loc", "e");
+      }
+
+      //detect nose
+      cv::Rect noseROIrect = Utils::getROI(faceRect,'n');
+      n.detect(grayImage(noseROIrect), cv::Size(40, 40));
+      //note: probably need some exception handling if marker is found in more than one rects.
+      //which probably will not happen :/
+      if(n.detected())
+      {
+        nROI = Utils::extendRectangle(noseROIrect, n.getRect());
+        if(e.detected())
+          Utils::trimNRectE(nROI, eROI);
+        if(m.detected())
+          Utils::trimNRectM(nROI, mROI);
+        rectangle(image, nROI, cv::Scalar(255,0,0),1,8,0);
+        logger.addToRow("nose", nROI);
+        if(nROI.contains(markerPosGlobal))
+          logger.addToRow("marker_loc", "n");
       }
     }
   }
@@ -122,7 +131,7 @@ void detect(cv::Mat image)
     std::cerr<< "0 or more than one faces found...skipping frame!"<<std::endl;
   }
 
-  /*namedWindow( "Display window", cv::WINDOW_AUTOSIZE );*/
-  //imshow("Display window", image);
-  /*cv::waitKey(0);*/
+  namedWindow( "Display window", cv::WINDOW_AUTOSIZE );
+  imshow("Display window", image);
+  cv::waitKey(0);
 }
