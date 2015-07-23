@@ -6,4 +6,4 @@ moving averages for rectangle sizes
 5. need to check how to detect tilted faces
 6. also need to tag marker coords, outside face ROI: outside face, inside face but not on any feature, marker not found. Also need to tag a frame with 
 face not found.
-
+7. Try opencv template matching
