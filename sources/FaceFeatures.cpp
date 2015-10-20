@@ -1,6 +1,5 @@
 #include "../includes/FaceFeatures.h"
-#include "../includes/common.h"
-
+#include "../includes/config.h"
 
 void Base::detect(cv::Mat img, cv::Size min_size)
 {

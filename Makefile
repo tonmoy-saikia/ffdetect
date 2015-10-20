@@ -1,6 +1,10 @@
+#http://mrbook.org/blog/tutorials/make/
 CC=g++
-CFLAGS+=`pkg-config --cflags opencv`
-LDFLAGS+=`pkg-config --libs opencv`
+#CFLAGS=-c -Wall
+CFLAGS = `pkg-config --cflags opencv`
+LDFLAGS= `pkg-config --libs opencv`
+#SOURCES=main.cpp sources/config.cpp sources/CSVLogger.cpp sources/FaceFeatures.cpp sources/Utils.cpp
 
 all:
-	g++ `pkg-config --cflags opencv` main.cpp sources/config.cpp sources/FaceFeatures.cpp sources/CSVLogger.cpp sources/Utils.cpp `pkg-config --libs opencv` -o main
+	$(CC) $(CFLAGS) main.cpp sources/FaceFeatures.cpp sources/config.cpp sources/CSVLogger.cpp sources/Utils.cpp $(LDFLAGS) -o ffdetect
+

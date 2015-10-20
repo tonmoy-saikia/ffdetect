@@ -1,4 +1,7 @@
 #include "../includes/Utils.h"
+#include "opencv2/imgproc/imgproc.hpp"
+#include <stdexcept>
+#include <iostream>
 cv::Rect Utils::extendRectangle(cv::Rect origRect, cv::Rect subRect)
 {
   cv::Point pt1(origRect.x + subRect.x, origRect.y + subRect.y);

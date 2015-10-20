@@ -1,10 +1,13 @@
-#include "includes/common.h"
 #include "includes/FaceFeatures.h"
 #include "includes/CSVLogger.h"
 #include "includes/Utils.h"
+#include "includes/config.h"
+#include "opencv2/highgui/highgui.hpp"
+#include "opencv2/imgproc/imgproc.hpp"
 #include <fstream>
+#include <iostream>
 
-void detect(cv::Mat img);
+void detect(cv::Mat img, std::string frame);
 void process_frame(int frame, cv::Mat img);//todo add timestamp
 char* getCmdOption(char ** begin, char ** end, const std::string & option)
 {
@@ -80,10 +83,13 @@ int main(int argc, char** argv)
       if(i>300 && !frame.empty())
       {
         process_frame(i,frame);
+        
+        //imwrite("sample11.png", frame);
       }
-      if(i==339)
+      if(i==800)
       {
-        imwrite("sample11.jpg", frame);
+        //cvtColor(frame, frame, CV_LOAD_IMAGE_COLOR);
+        //cv::imshow("Display window", frame);
         break;
       }
     }
@@ -100,22 +106,24 @@ void process_frame(int frame, cv::Mat img)
 {
   logger.newRow();
   logger.addToRow("frame_no", Utils::toString(frame));
-  detect(img);
+  detect(img, Utils::toString(frame));
 }
 
-void detect(cv::Mat image)
+void detect(cv::Mat image, std::string frame_no)
 {
+
   Face f; Nose n; Eyes e; Mouth m;
   cv::Mat grayImage, equalized;
   cvtColor(image, grayImage, CV_BGR2GRAY);
   equalizeHist(grayImage,equalized);
   f.detect(equalized, cv::Size(100,100));
   if(f.detected()){
+
     cv::Rect nROI, eROI, mROI;
     cv::Rect faceRect = f.getRect();
     //draw rectangle around face
     logger.addToRow("face", faceRect);
-    //rectangle(image, faceRect, cv::Scalar(0,255,0),1,8,0);
+    rectangle(image, faceRect, cv::Scalar(0,255,0),1,8,0);
 
     cv::Mat faceROI = image(faceRect);// need th color info locating marker
     cv::Point markerPos = Utils::locateMarker(faceROI);
@@ -127,7 +135,7 @@ void detect(cv::Mat image)
     {
       cv::Point markerPosGlobal = Utils::getGlobalMarkerPos(markerPos, faceRect);
       logger.addToRow(markerPosGlobal);
-      //circle(image, markerPosGlobal, 3 , cv::Scalar( 252, 22, 120 ), -1, 8);//locate marker
+      circle(image, markerPosGlobal, 3 , cv::Scalar( 252, 22, 120 ), -1, 8);//locate marker
 
       //detect mouth
       cv::Rect mouthROIrect = Utils::getROI(faceRect, 'm');
@@ -135,7 +143,7 @@ void detect(cv::Mat image)
       if(m.detected())
       {
         mROI = Utils::extendRectangle(mouthROIrect, m.getRect());
-        //rectangle(image, mROI, cv::Scalar(255,0,0),1,8,0);
+        rectangle(image, mROI, cv::Scalar(255,0,0),1,8,0);
         logger.addToRow("mouth", mROI);
         if(mROI.contains(markerPosGlobal))
           logger.addToRow("marker_loc", "m");
@@ -147,7 +155,7 @@ void detect(cv::Mat image)
       if(e.detected())
       {
         eROI = Utils::extendRectangle(eyeROIrect, e.getRect());
-        //rectangle(image, eROI, cv::Scalar(255,0,0),1,8,0);
+        rectangle(image, eROI, cv::Scalar(255,0,0),1,8,0);
         logger.addToRow("eye", eROI);
         if(eROI.contains(markerPosGlobal))
           logger.addToRow("marker_loc", "e");
@@ -165,15 +173,19 @@ void detect(cv::Mat image)
           Utils::trimNRectE(nROI, eROI);
         if(m.detected())
           Utils::trimNRectM(nROI, mROI);
-        //rectangle(image, nROI, cv::Scalar(255,0,0),1,8,0);
+        rectangle(image, nROI, cv::Scalar(255,0,0),1,8,0);
         logger.addToRow("nose", nROI);
         if(nROI.contains(markerPosGlobal))
           logger.addToRow("marker_loc", "n");
       }
     }
+    std::string filename = "./found/"+frame_no + "found.jpg";
+    imwrite(filename, image);
   }
   else
   {
+    std::string filename = "./nfound/"+frame_no + "notfound.jpg";
+   imwrite(filename,image);
     std::cerr<< "0 or more than one faces found...skipping frame!"<<std::endl;
   }
 

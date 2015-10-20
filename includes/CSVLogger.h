@@ -1,5 +1,9 @@
-#include "common.h"
+#ifndef CSV_LOGGER
+#define CSV_LOGGER
 #include <fstream>
+#include <vector>
+#include <map>
+#include "opencv2/imgproc/imgproc.hpp"
 
 class CSVLogger
 {
@@ -18,3 +22,4 @@ class CSVLogger
     void addToRow(cv::Point p);
     void flush();
 };
+#endif

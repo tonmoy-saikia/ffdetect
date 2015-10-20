@@ -8,6 +8,7 @@ CSVLogger::CSVLogger(const char* filename)
   set_header_order();
   create_default_row();
 }
+
 void CSVLogger::set_header_order()
 {
   header_order.push_back("frame_no");

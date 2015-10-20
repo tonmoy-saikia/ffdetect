@@ -1,8 +1,7 @@
 #ifndef UTILS_H
 #define UTILS_H
 #include <string>
-#include "common.h"
-
+#include "opencv2/imgproc/imgproc.hpp"
 namespace Utils
 {
   cv::Rect extendRectangle(cv::Rect origRect, cv::Rect subRect);

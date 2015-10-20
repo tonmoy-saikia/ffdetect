@@ -1,5 +1,9 @@
-#include "common.h"
+#ifndef FACE_FEATURES_H
+#define FACE_FEATURES_H
 
+#include "opencv2/objdetect/objdetect.hpp"
+#include "opencv2/imgproc/imgproc.hpp"
+#include <vector>
 class Base
 {
 protected:
@@ -34,4 +38,4 @@ class Mouth: public Base
 public:
   Mouth();
 };
-
+#endif

@@ -1,5 +1,5 @@
 #Various viola jones detection parameters
-SCALE_FACTOR=1.2
+SCALE_FACTOR=1.1
 
 
 #Haar cascade file locations
