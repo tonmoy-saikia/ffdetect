@@ -3,7 +3,7 @@
 
 void Base::detect(cv::Mat img, cv::Size min_size)
 {
-  classifier.detectMultiScale(img, rects, config::SCALE_FACTOR, 1,CV_HAAR_SCALE_IMAGE, min_size);
+  classifier.detectMultiScale(img, rects, config::SCALE_FACTOR, 3 ,CV_HAAR_SCALE_IMAGE, min_size);
 }
 
 bool Base::detected()
