@@ -12,26 +12,15 @@ CSVLogger::CSVLogger(const char* filename)
 void CSVLogger::set_header_order()
 {
   header_order.push_back("frame_no");
-  header_order.push_back("seek_time");
-  header_order.push_back("face_rect_x");
-  header_order.push_back("face_rect_y");
-  header_order.push_back("face_rect_w");
-  header_order.push_back("face_rect_h");
-  header_order.push_back("eye_rect_x");
-  header_order.push_back("eye_rect_y");
-  header_order.push_back("eye_rect_w");
-  header_order.push_back("eye_rect_h");
-  header_order.push_back("nose_rect_x");
-  header_order.push_back("nose_rect_y");
-  header_order.push_back("nose_rect_w");
-  header_order.push_back("nose_rect_h");
-  header_order.push_back("mouth_rect_x");
-  header_order.push_back("mouth_rect_y");
-  header_order.push_back("mouth_rect_w");
-  header_order.push_back("mouth_rect_h");
+  header_order.push_back("ts");
+  header_order.push_back("face_rect");
+  for(int i=1; i<=68; i++)
+  {
+    std::string part_name = "l" + Utils::toString(i);
+    header_order.push_back(part_name);
+  }
   header_order.push_back("marker_loc");
-  header_order.push_back("marker_coord_x");
-  header_order.push_back("marker_coord_y");
+  header_order.push_back("marker_coord");
 }
 
 void CSVLogger::create_default_row()
@@ -67,22 +56,23 @@ void CSVLogger::addToRow(cv::Point p)
   addToRow("marker_coord_y", Utils::toString(p.y));
 }
 
-void CSVLogger::addToRow(std::string rType, cv::Rect value)
+void CSVLogger::addToRow(std::string r_name, dlib::rectangle value)
 {
-  std::vector<std::string> rectTypes;
-  rectTypes.push_back("face"); rectTypes.push_back("nose");
-  rectTypes.push_back("mouth"); rectTypes.push_back("eye");
-  std::vector<std::string>::iterator it = std::find(rectTypes.begin(), rectTypes.end(), rType);
-  if(it != rectTypes.end())
+    std::string val = Utils::toString(value.left()) + ";"+
+                      Utils::toString(value.top()) + ";" +
+                      Utils::toString(value.right()) + ";"+
+                      Utils::toString(value.bottom());
+    addToRow(r_name, val);
+}
+
+
+void CSVLogger::addToRow(dlib::full_object_detection shape)
+{
+  for(int i=0; i<shape.num_parts();i++)
   {
-    addToRow(*it + "_rect_x", Utils::toString(value.x));
-    addToRow(*it + "_rect_y", Utils::toString(value.y));
-    addToRow(*it + "_rect_w", Utils::toString(value.width));
-    addToRow(*it + "_rect_h", Utils::toString(value.height));
-  }
-  else
-  {
-    //raise exception
+    std::string key = "l" + Utils::toString(i+1);
+    std::string val = Utils::toString(shape.part(i).x()) + ";" + Utils::toString(shape.part(i).y());
+    addToRow(key, val);
   }
 }
 

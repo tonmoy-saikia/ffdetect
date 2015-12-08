@@ -13,7 +13,6 @@
 #include <dlib/image_processing.h>
 
 void detect(cv::Mat img, std::string frame);
-void process_frame(int frame, cv::Mat img);//todo add timestamp
 char* getCmdOption(char ** begin, char ** end, const std::string & option);
 bool cmdOptionExists(char** begin, char** end, const std::string& option);
 void process_video(char *filename);
@@ -30,7 +29,7 @@ int main(int argc, char** argv)
   {
     char * filename = getCmdOption(argv, argv + argc, "-i");
     frame = cv::imread(filename, CV_LOAD_IMAGE_COLOR);
-    process_frame(1, frame);
+    //process_frame(1, frame);
   }
   else if(cmdOptionExists(argv, argv+argc, "-v"))
   {
@@ -59,12 +58,16 @@ void process_video(char *filename)
       throw std::invalid_argument("Invalid filename");
     }
     cap.set(CV_CAP_PROP_CONVERT_RGB, 1);
-    cap.set(CV_CAP_PROP_POS_FRAMES, 1500);
+    cap.set(CV_CAP_PROP_POS_FRAMES, 1500);//TODO change
     bool facefound = false;
     // Load face detection and pose estimation models.
     dlib::frontal_face_detector detector = dlib::get_frontal_face_detector();
+    std::cout << "Face Detector loaded." << std::endl;
+
+    //Load shape model
     dlib::shape_predictor pose_model;
     dlib::deserialize("shape_predictor_68_face_landmarks.dat") >> pose_model;
+    std::cout << "Face landmarks model loaded." << std::endl;
 
     dlib::correlation_tracker tracker;
 
@@ -72,23 +75,28 @@ void process_video(char *filename)
     dlib::full_object_detection shape;
 
     int count = 0;
-    cv::Mat newframe;
-    while(count < 600)
+    cv::Mat newframe, temp;
+    while(count < 60)
     {
       // Grab a frame
-      cv::Mat temp;
       cap >> temp;
       if(temp.empty())
+      {
+        std::cout << "Skipping empty frame. Frame no: " << count << std::endl;
         continue;
+      }
+      //resize(temp, temp, cv::Size(640,480));
+      //add a new row to the csv file
+      logger.newRow();
+
       // Turn OpenCV's Mat into something dlib can deal with.  Note that this just
       // wraps the Mat object, it doesn't copy anything.  So cimg is only valid as
       // long as temp is valid.  Also don't do anything to temp that would cause it
       // to reallocate the memory which stores the image as that will make cimg
       // contain dangling pointers.  This basically means you shouldn't modify temp
       // while using cimg.
-      cv::Size size(640,480);//the dst image size,e.g.100x100
-      resize(temp,temp,size);//resize image
-
+      //cv::Size size(640,480);//the dst image size,e.g.100x100
+      //resize(temp,temp,size);//resize image
       dlib::cv_image<dlib::bgr_pixel> cimg(temp);
 
       // Detect faces
@@ -97,7 +105,7 @@ void process_video(char *filename)
         faces = detector(cimg);
         if(faces.size()>0)
         {
-          tracker.start_track(cimg, centered_rect(faces[0],faces[0].width(),faces[0].height()));
+          tracker.start_track(cimg, centered_rect(faces[0], faces[0].width(), faces[0].height()));
           facefound = true;
           shape = pose_model(cimg, tracker.get_position());
         }
@@ -107,11 +115,21 @@ void process_video(char *filename)
         tracker.update(cimg);
         shape = pose_model(cimg, tracker.get_position());
       }
-      count++;
-      newframe = dlib::toMat(cimg);
+      //TODO
+      //find point in image
+      //check if point is in ellipse
 
-      imshow("disp window", newframe);
+      //log entries
+      logger.addToRow("frame_no", Utils::toString(count));
+      logger.addToRow("ts", Utils::toString(cap.get(CV_CAP_PROP_POS_MSEC)));
+      logger.addToRow(shape);
+      logger.addToRow("face_rect", tracker.get_position());
+      dlib::rectangle r = tracker.get_position();
+      rectangle(temp, cv::Rect(cv::Point(r.left(),r.top()), cv::Point(r.right(),r.bottom())), cv::Scalar(255,0,0),1,8,0);
+      //newframe = dlib::toMat(cimg);
+      imshow("disp window", temp);
       cv::waitKey(10);
+      count++;
     }
   }
   catch(dlib::serialization_error& e)
@@ -125,12 +143,6 @@ void process_video(char *filename)
   {
     std::cout<< e.what() << std::endl;
   }
-}
-void process_frame(int frame, cv::Mat img)
-{
-  logger.newRow();
-  logger.addToRow("frame_no", Utils::toString(frame));
-  detect(img, Utils::toString(frame));
 }
 
 char* getCmdOption(char ** begin, char ** end, const std::string & option)

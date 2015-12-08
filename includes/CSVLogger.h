@@ -3,7 +3,8 @@
 #include <fstream>
 #include <vector>
 #include <map>
-#include "opencv2/imgproc/imgproc.hpp"
+#include <dlib/image_processing.h>
+#include <opencv2/imgproc/imgproc.hpp>
 
 class CSVLogger
 {
@@ -18,7 +19,8 @@ class CSVLogger
     CSVLogger(const char*);
     void newRow();
     void addToRow(std::string key, std::string value);
-    void addToRow(std::string rectType, cv::Rect value);
+    void addToRow(std::string r_name, dlib::rectangle value);
+    void addToRow(dlib::full_object_detection shape);
     void addToRow(cv::Point p);
     void flush();
 };
