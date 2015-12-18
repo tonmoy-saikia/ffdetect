@@ -2,12 +2,7 @@
 #include "opencv2/imgproc/imgproc.hpp"
 #include <stdexcept>
 #include <iostream>
-cv::Rect Utils::extendRectangle(cv::Rect origRect, cv::Rect subRect)
-{
-  cv::Point pt1(origRect.x + subRect.x, origRect.y + subRect.y);
-  cv::Point pt2(pt1.x + subRect.width, pt1.y + subRect.height);
-  return cv::Rect(pt1,pt2);
-}
+#define PI 3.14159265
 
 std::string Utils::toString(int num)
 {
@@ -15,6 +10,7 @@ std::string Utils::toString(int num)
   ss << num;
   return ss.str();
 }
+
 cv::Point Utils::locateMarker(cv::Mat clrImg)
 {
   cv::Mat bgIsolation;
@@ -79,14 +75,79 @@ void Utils::printMarkerLocation(cv::Rect rect, cv::Point loc, std::string type)
   }
 }
 
-void Utils::trimNRectE(cv::Rect &nROI, cv::Rect eROI)
+cv::Point_<float> Utils::get_center_pt(std::vector< cv::Point_<float> > points)
 {
-  int offset = 1;
-  nROI.y = eROI.y + eROI.height + offset;
+  float x,y;
+  x=y=0.0;
+  for(int i=0; i<points.size(); i++)
+  {
+    x+=points[i].x;
+    y+=points[i].y;
+  }
+  x = x/points.size();
+  y = y/points.size();
+  return cv::Point_<float>(x,y);
 }
 
-void Utils::trimNRectM(cv::Rect &nROI, cv::Rect mROI)
+float Utils::getRegressionLineSlope(std::vector<cv::Point_<float> > points, cv::Point_<float> center)
 {
-  int offset = 1;
-  nROI.height = mROI.y - nROI.y - offset;
+
+  std::cout << "Regression \n";
+  float xy_sum=0.0; float xx_sum = 0.0;
+  //cv::Point_<float> center = get_center_pt(points);
+  for(int i=0; i<points.size(); i++)
+  {
+    cv::Point_<float> pt = points[i];
+    xy_sum = xy_sum + pt.x * pt.y;
+    xx_sum = xx_sum + pt.x * pt.x;
+    //std::cout<< "pt" << i << points[i] <<"\n";
+  }
+  std::cout<< "xy_sum" << xy_sum <<"\n";
+  std::cout<< "xx_sum" << xx_sum <<"\n";
+  std::cout << "-------------\n";
+  float cxy = points.size()*center.x*center.y;
+  float cxx = points.size()*center.x*center.x;
+  float num = xy_sum - cxy;
+  float den = xx_sum - cxx;
+  return num/den;
+}
+
+void Utils::display_pts(cv::Mat &image, std::vector< cv::Point_<float> > points)
+{
+  for(int i=0; i<points.size(); i++)
+  {
+    circle( image, points[i], 1.0, cv::Scalar( 0, 0, 255 ), 2, 8 );
+  }
+}
+
+pos_vector Utils::get_pv(cv::Point_<float> p1, cv::Point_<float> p2)
+{
+  return p2 - p1;
+}
+
+void Utils::initialize_ellipse(pos_vector mj_scaling, pos_vector min_scaling, float slope, Ellipse &e, cv::Point_<float> center)
+{
+  pos_vector major_axis_v, minor_axis_v;
+  major_axis_v = pos_vector(sqrt(mj_scaling.x*mj_scaling.x + mj_scaling.y*mj_scaling.y),
+      sqrt(mj_scaling.x*mj_scaling.x + mj_scaling.y*mj_scaling.y)*slope
+      );
+
+  if(major_axis_v.x == 0)
+  {
+    minor_axis_v = pos_vector(1.0, 0.0);
+  }
+  else
+  {
+    minor_axis_v = pos_vector(-major_axis_v.y/major_axis_v.x, 1.0);
+  }
+
+  minor_axis_v = minor_axis_v * sqrtf(min_scaling.x*min_scaling.x + min_scaling.y*min_scaling.y);
+  e.major_axis = sqrt(major_axis_v.x*major_axis_v.x + major_axis_v.y*major_axis_v.y);
+  e.minor_axis = sqrt(minor_axis_v.x*minor_axis_v.x + minor_axis_v.y*minor_axis_v.y);
+  e.rotation = atan(slope) * 180 / PI;
+  e.center = center;
+  std::cout <<"major:" << e.major_axis << "\n";
+  std::cout <<"minor:" << e.minor_axis << "\n";
+  std::cout <<"center:" << e.center << "\n";
+  std::cout <<"rot:" << e.rotation << "\n";
 }
