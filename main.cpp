@@ -1,6 +1,6 @@
 #include "includes/CSVLogger.h"
 #include "includes/Utils.h"
-#include "includes/config.h"
+#include "includes/LandmarkMapper.h"
 #include <fstream>
 #include <iostream>
 #include <vector>
@@ -9,26 +9,25 @@
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <dlib/image_processing/frontal_face_detector.h>
-#include <dlib/image_processing/render_face_detections.h>
 #include <dlib/image_processing.h>
 
 void detect(cv::Mat img, std::string frame);
 char* getCmdOption(char ** begin, char ** end, const std::string & option);
 bool cmdOptionExists(char** begin, char** end, const std::string& option);
 void process_video(char *filename);
+void process_ellipses(dlib::full_object_detection shape, cv::Mat &image, LandmarkMapper lm, std::string);
 
 CSVLogger logger("logfile");
 
 int main(int argc, char** argv)
 {
   //Initialize config variables
-  config::load_config_file();
-  cv::Mat frame;
+  //config::load_config_file();
   //TODO improve cmd line parsing
   if(cmdOptionExists(argv, argv+argc, "-i"))
   {
     char * filename = getCmdOption(argv, argv + argc, "-i");
-    frame = cv::imread(filename, CV_LOAD_IMAGE_COLOR);
+    //frame = cv::imread(filename, CV_LOAD_IMAGE_COLOR);
     //process_frame(1, frame);
   }
   else if(cmdOptionExists(argv, argv+argc, "-v"))
@@ -52,13 +51,18 @@ void process_video(char *filename)
 {
   try
   {
-    cv::VideoCapture cap;//(0)
-    if(!cap.open(filename))
-    {
-      throw std::invalid_argument("Invalid filename");
-    }
-    cap.set(CV_CAP_PROP_CONVERT_RGB, 1);
-    cap.set(CV_CAP_PROP_POS_FRAMES, 1500);//TODO change
+    cv::VideoCapture cap(0);// cap(0);
+    //if(!cap.open(filename))
+    //{
+      //throw std::invalid_argument("Invalid filename");
+   // }
+    //cap.set(CV_CAP_PROP_CONVERT_RGB, 1);
+    //cap.set(CV_CAP_PROP_POS_FRAMES, 1500);//TODO change
+
+    //int frame_width=   cap.get(CV_CAP_PROP_FRAME_WIDTH);
+    //int frame_height=   cap.get(CV_CAP_PROP_FRAME_HEIGHT);
+    //cv::VideoWriter video("out.avi", static_cast<int>(cap.get(CV_CAP_PROP_FOURCC)) , cap.get(CV_CAP_PROP_FPS), cv::Size(frame_width,frame_height),true);
+
     bool facefound = false;
     // Load face detection and pose estimation models.
     dlib::frontal_face_detector detector = dlib::get_frontal_face_detector();
@@ -76,7 +80,7 @@ void process_video(char *filename)
 
     int count = 0;
     cv::Mat newframe, temp;
-    while(count < 60)
+    while(count < 600)
     {
       // Grab a frame
       cap >> temp;
@@ -85,6 +89,8 @@ void process_video(char *filename)
         std::cout << "Skipping empty frame. Frame no: " << count << std::endl;
         continue;
       }
+
+      //cvtColor(temp, temp, CV_BGR2GRAY);
       //resize(temp, temp, cv::Size(640,480));
       //add a new row to the csv file
       logger.newRow();
@@ -97,6 +103,7 @@ void process_video(char *filename)
       // while using cimg.
       //cv::Size size(640,480);//the dst image size,e.g.100x100
       //resize(temp,temp,size);//resize image
+      //dlib::cv_image<uchar> cimg(temp);
       dlib::cv_image<dlib::bgr_pixel> cimg(temp);
 
       // Detect faces
@@ -108,12 +115,14 @@ void process_video(char *filename)
           tracker.start_track(cimg, centered_rect(faces[0], faces[0].width(), faces[0].height()));
           facefound = true;
           shape = pose_model(cimg, tracker.get_position());
+          std::cout << "Refreshing..." << std::endl;
         }
       }
       else
       {
         tracker.update(cimg);
         shape = pose_model(cimg, tracker.get_position());
+        std::cout << "Tracking..." << std::endl;
       }
       //TODO
       //find point in image
@@ -121,15 +130,23 @@ void process_video(char *filename)
 
       //log entries
       logger.addToRow("frame_no", Utils::toString(count));
-      logger.addToRow("ts", Utils::toString(cap.get(CV_CAP_PROP_POS_MSEC)));
+      //logger.addToRow("ts", Utils::toString(cap.get(CV_CAP_PROP_POS_MSEC)));
       logger.addToRow(shape);
       logger.addToRow("face_rect", tracker.get_position());
       dlib::rectangle r = tracker.get_position();
       rectangle(temp, cv::Rect(cv::Point(r.left(),r.top()), cv::Point(r.right(),r.bottom())), cv::Scalar(255,0,0),1,8,0);
+      //cv::imwrite("test.jpg",temp);
+      LandmarkMapper lm(shape);
+      process_ellipses(shape,temp,lm, "mouth");
+      process_ellipses(shape,temp,lm, "l_eye");
+      process_ellipses(shape,temp,lm, "r_eye");
+      
       //newframe = dlib::toMat(cimg);
+      count++;
+      //video << temp ;
       imshow("disp window", temp);
       cv::waitKey(10);
-      count++;
+      //break;
     }
   }
   catch(dlib::serialization_error& e)
@@ -160,87 +177,11 @@ bool cmdOptionExists(char** begin, char** end, const std::string& option)
   return std::find(begin, end, option) != end;
 }
 
-/*void detect(cv::Mat image, std::string frame_no)*/
-//{
-
-//Face f; Nose n; Eyes e; Mouth m;
-//cv::Mat grayImage, equalized;
-//cvtColor(image, grayImage, CV_BGR2GRAY);
-//equalizeHist(grayImage,equalized);
-//f.detect(equalized, cv::Size(100,100));
-//if(f.detected()){
-
-//cv::Rect nROI, eROI, mROI;
-//cv::Rect faceRect = f.getRect();
-////draw rectangle around face
-//logger.addToRow("face", faceRect);
-//rectangle(image, faceRect, cv::Scalar(0,255,0),1,8,0);
-
-//cv::Mat faceROI = image(faceRect);// need th color info locating marker
-//cv::Point markerPos = Utils::locateMarker(faceROI);
-//if(markerPos.x==0 && markerPos.y==0)
-//{
-//std::cerr<< "Marker not found!";
-//}
-//else
-//{
-//cv::Point markerPosGlobal = Utils::getGlobalMarkerPos(markerPos, faceRect);
-//logger.addToRow(markerPosGlobal);
-//circle(image, markerPosGlobal, 3 , cv::Scalar( 252, 22, 120 ), -1, 8);//locate marker
-
-////detect mouth
-//cv::Rect mouthROIrect = Utils::getROI(faceRect, 'm');
-//m.detect(grayImage(mouthROIrect), cv::Size(40, 40));
-//if(m.detected())
-//{
-//mROI = Utils::extendRectangle(mouthROIrect, m.getRect());
-//rectangle(image, mROI, cv::Scalar(255,0,0),1,8,0);
-//logger.addToRow("mouth", mROI);
-//if(mROI.contains(markerPosGlobal))
-//logger.addToRow("marker_loc", "m");
-//}
-
-////detect eyes
-//cv::Rect eyeROIrect = Utils::getROI(faceRect, 'e');
-//e.detect(grayImage(eyeROIrect), cv::Size(30,30));
-//if(e.detected())
-//{
-//eROI = Utils::extendRectangle(eyeROIrect, e.getRect());
-//rectangle(image, eROI, cv::Scalar(255,0,0),1,8,0);
-//logger.addToRow("eye", eROI);
-//if(eROI.contains(markerPosGlobal))
-//logger.addToRow("marker_loc", "e");
-//}
-
-////detect nose
-//cv::Rect noseROIrect = Utils::getROI(faceRect,'n');
-//n.detect(grayImage(noseROIrect), cv::Size(40, 40));
-////note: probably need some exception handling if marker is found in more than one rects.
-////which probably will not happen :/
-//if(n.detected())
-//{
-//nROI = Utils::extendRectangle(noseROIrect, n.getRect());
-//if(e.detected())
-//Utils::trimNRectE(nROI, eROI);
-//if(m.detected())
-//Utils::trimNRectM(nROI, mROI);
-//rectangle(image, nROI, cv::Scalar(255,0,0),1,8,0);
-//logger.addToRow("nose", nROI);
-//if(nROI.contains(markerPosGlobal))
-//logger.addToRow("marker_loc", "n");
-//}
-//}
-//std::string filename = "./found/"+frame_no + "found.jpg";
-//imwrite(filename, image);
-//}
-//else
-//{
-//std::string filename = "./nfound/"+frame_no + "notfound.jpg";
-//imwrite(filename,image);
-//std::cerr<< "0 or more than one faces found...skipping frame!"<<std::endl;
-//}
-
-////namedWindow( "Display window", cv::WINDOW_AUTOSIZE );
-////imshow("Display window", image);
-////cv::waitKey(0);
-/*}*/
+void process_ellipses(dlib::full_object_detection shape, cv::Mat &image, LandmarkMapper lm, std::string type)
+{
+  Ellipse e;
+  Utils::display_pts(image, lm.pmap[type]);
+  float slope = Utils::getRegressionLineSlope(lm.pmap[type], lm.cmap[type]);
+  Utils::initialize_ellipse(lm.pvmap[type].maj, lm.pvmap[type].min, slope, e, lm.cmap[type]);
+  e.draw(image);
+}
