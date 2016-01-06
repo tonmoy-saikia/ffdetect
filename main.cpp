@@ -15,7 +15,8 @@ void detect(cv::Mat img, std::string frame);
 char* getCmdOption(char ** begin, char ** end, const std::string & option);
 bool cmdOptionExists(char** begin, char** end, const std::string& option);
 void process_video(char *filename);
-void process_ellipses(dlib::full_object_detection shape, cv::Mat &image, LandmarkMapper lm, std::string);
+std::string get_bounding_ellipse(cv::Mat &image, LandmarkMapper lm, cv::Point marker_loc);
+Ellipse interpolate_ellipse(cv::Mat &image, LandmarkMapper lm, std::string type);
 
 CSVLogger logger("logfile");
 
@@ -51,12 +52,12 @@ void process_video(char *filename)
 {
   try
   {
-    cv::VideoCapture cap(0);// cap(0);
-    //if(!cap.open(filename))
-    //{
-      //throw std::invalid_argument("Invalid filename");
-   // }
-    //cap.set(CV_CAP_PROP_CONVERT_RGB, 1);
+    cv::VideoCapture cap;
+    if(!cap.open(filename))
+    {
+      throw std::invalid_argument("Invalid filename");
+    }
+    cap.set(CV_CAP_PROP_CONVERT_RGB, 1);
     //cap.set(CV_CAP_PROP_POS_FRAMES, 1500);//TODO change
 
     //int frame_width=   cap.get(CV_CAP_PROP_FRAME_WIDTH);
@@ -73,80 +74,73 @@ void process_video(char *filename)
     dlib::deserialize("shape_predictor_68_face_landmarks.dat") >> pose_model;
     std::cout << "Face landmarks model loaded." << std::endl;
 
+
     dlib::correlation_tracker tracker;
 
     std::vector<dlib::rectangle> faces;
     dlib::full_object_detection shape;
 
     int count = 0;
-    cv::Mat newframe, temp;
+    cv::Mat frame, gray_frame;
+
     while(count < 600)
     {
       // Grab a frame
-      cap >> temp;
-      if(temp.empty())
+      cap >> frame;
+      count++;
+      if(frame.empty())
       {
         std::cout << "Skipping empty frame. Frame no: " << count << std::endl;
         continue;
       }
 
-      //cvtColor(temp, temp, CV_BGR2GRAY);
-      //resize(temp, temp, cv::Size(640,480));
+      cvtColor(frame, gray_frame, CV_BGR2GRAY);
+      //resize(gray_frame, gray_frame, cv::Size(640,480));
+
       //add a new row to the csv file
       logger.newRow();
 
-      // Turn OpenCV's Mat into something dlib can deal with.  Note that this just
-      // wraps the Mat object, it doesn't copy anything.  So cimg is only valid as
-      // long as temp is valid.  Also don't do anything to temp that would cause it
-      // to reallocate the memory which stores the image as that will make cimg
-      // contain dangling pointers.  This basically means you shouldn't modify temp
-      // while using cimg.
-      //cv::Size size(640,480);//the dst image size,e.g.100x100
-      //resize(temp,temp,size);//resize image
-      //dlib::cv_image<uchar> cimg(temp);
-      dlib::cv_image<dlib::bgr_pixel> cimg(temp);
+      //don't modify gray_frame while using dimg.
+      dlib::cv_image<uchar> dimg(gray_frame);
+      //dlib::cv_image<dlib::bgr_pixel> cimg(temp);
 
       // Detect faces
       if(!facefound || count%20==0)
       {
-        faces = detector(cimg);
+        faces = detector(dimg);
         if(faces.size()>0)
         {
-          tracker.start_track(cimg, centered_rect(faces[0], faces[0].width(), faces[0].height()));
           facefound = true;
-          shape = pose_model(cimg, tracker.get_position());
+          tracker.start_track(dimg, centered_rect(faces[0], faces[0].width(), faces[0].height()));
+          shape = pose_model(dimg, tracker.get_position());
           std::cout << "Refreshing..." << std::endl;
         }
       }
       else
       {
-        tracker.update(cimg);
-        shape = pose_model(cimg, tracker.get_position());
+        tracker.update(dimg);
+        shape = pose_model(dimg, tracker.get_position());
         std::cout << "Tracking..." << std::endl;
       }
-      //TODO
-      //find point in image
-      //check if point is in ellipse
+      cv::Point marker_loc = Utils::locateMarker(frame);
 
-      //log entries
-      logger.addToRow("frame_no", Utils::toString(count));
-      //logger.addToRow("ts", Utils::toString(cap.get(CV_CAP_PROP_POS_MSEC)));
-      logger.addToRow(shape);
-      logger.addToRow("face_rect", tracker.get_position());
       dlib::rectangle r = tracker.get_position();
-      rectangle(temp, cv::Rect(cv::Point(r.left(),r.top()), cv::Point(r.right(),r.bottom())), cv::Scalar(255,0,0),1,8,0);
-      //cv::imwrite("test.jpg",temp);
-      LandmarkMapper lm(shape);
-      process_ellipses(shape,temp,lm, "mouth");
-      process_ellipses(shape,temp,lm, "l_eye");
-      process_ellipses(shape,temp,lm, "r_eye");
-      
-      //newframe = dlib::toMat(cimg);
-      count++;
-      //video << temp ;
-      imshow("disp window", temp);
+      rectangle(frame, cv::Rect(cv::Point(r.left(),r.top()), cv::Point(r.right(),r.bottom())), cv::Scalar(255,0,0),1,8,0);
+      if(shape.num_parts()>0)
+      {
+        LandmarkMapper lm(shape);
+        std::string ml = get_bounding_ellipse(gray_frame, lm, marker_loc);
+        logger.addToRow(shape);
+        logger.addToRow("marker_loc", ml);
+      }
+      //log extracted data
+      logger.addToRow("frame_no", Utils::toString(count));
+      logger.addToRow("ts", Utils::toString(cap.get(CV_CAP_PROP_POS_MSEC)));
+      logger.addToRow("face_rect", tracker.get_position());
+      logger.addToRow(marker_loc);
+
+      imshow("disp window", frame);
       cv::waitKey(10);
-      //break;
     }
   }
   catch(dlib::serialization_error& e)
@@ -177,11 +171,39 @@ bool cmdOptionExists(char** begin, char** end, const std::string& option)
   return std::find(begin, end, option) != end;
 }
 
-void process_ellipses(dlib::full_object_detection shape, cv::Mat &image, LandmarkMapper lm, std::string type)
+Ellipse interpolate_ellipse(cv::Mat &image, LandmarkMapper lm, std::string type)
 {
   Ellipse e;
   Utils::display_pts(image, lm.pmap[type]);
   float slope = Utils::getRegressionLineSlope(lm.pmap[type], lm.cmap[type]);
   Utils::initialize_ellipse(lm.pvmap[type].maj, lm.pvmap[type].min, slope, e, lm.cmap[type]);
   e.draw(image);
+  return e;
+}
+
+std::string get_bounding_ellipse(cv::Mat &image, LandmarkMapper lm, cv::Point marker_loc)
+{
+  Ellipse m_elps  = interpolate_ellipse(image, lm, "mouth");
+  Ellipse le_elps  = interpolate_ellipse(image, lm, "l_eye");
+  Ellipse re_elps  = interpolate_ellipse(image, lm, "r_eye");
+  //Ellipse f_elps  = interpolate_ellipse(image, lm, "face");
+  std::string elps_name="";
+
+  if(m_elps.encloses(marker_loc))
+  {
+    elps_name = "m";
+  }
+  if(le_elps.encloses(marker_loc))
+  {
+    elps_name = "le";
+  }
+  if(re_elps.encloses(marker_loc))
+  {
+    elps_name = "re";
+  }
+  //if(f_elps.encloses(marker_loc))
+  //{
+   // elps_name = "f";
+  //}
+  return elps_name;
 }

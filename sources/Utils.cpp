@@ -17,6 +17,7 @@ cv::Point Utils::locateMarker(cv::Mat clrImg)
   cv::Point mCoord;
   //cvtColor(clrImg, imgHSV, cv::COLOR_BGR2HSV);//no hsv for now
   int rh = 255, rl = 100, gh = 255, gl = 0, bh = 70, bl = 0;
+  //int rh = 255, rl = 200, gh = 0, gl = 0, bh = 0, bl = 0;
   cv::inRange(clrImg, cv::Scalar(bl, gl, rl), cv::Scalar(bh, gh, rh), bgIsolation);
   cv::Moments oMoments = cv::moments(bgIsolation);
   double dM01 = oMoments.m01;

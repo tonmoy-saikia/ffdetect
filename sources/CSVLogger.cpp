@@ -52,8 +52,7 @@ void CSVLogger::addToRow(std::string key, std::string value)
 
 void CSVLogger::addToRow(cv::Point p)
 {
-  addToRow("marker_coord_x", Utils::toString(p.x));
-  addToRow("marker_coord_y", Utils::toString(p.y));
+  addToRow("marker_coord", Utils::toString(p.x) + ";" + Utils::toString(p.y));
 }
 
 void CSVLogger::addToRow(std::string r_name, dlib::rectangle value)

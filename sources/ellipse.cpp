@@ -2,7 +2,10 @@
 Ellipse::Ellipse(){}
 bool Ellipse::encloses(cv::Point pt)
 {
-  return true;
+  float eval = pow(((pt.x - center.x)*cos(rotation) + (pt.y - center.y)*sin(rotation))/major_axis,2) +
+               pow(((pt.x - center.x)*sin(rotation) - (pt.y - center.y)*cos(rotation))/minor_axis,2);
+
+  return eval<=1.0;
 }
 
 void Ellipse::draw(cv::Mat &image)
