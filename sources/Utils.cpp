@@ -93,19 +93,14 @@ cv::Point_<float> Utils::get_center_pt(std::vector< cv::Point_<float> > points)
 float Utils::getRegressionLineSlope(std::vector<cv::Point_<float> > points, cv::Point_<float> center)
 {
 
-  std::cout << "Regression \n";
   float xy_sum=0.0; float xx_sum = 0.0;
-  //cv::Point_<float> center = get_center_pt(points);
   for(int i=0; i<points.size(); i++)
   {
     cv::Point_<float> pt = points[i];
     xy_sum = xy_sum + pt.x * pt.y;
     xx_sum = xx_sum + pt.x * pt.x;
-    //std::cout<< "pt" << i << points[i] <<"\n";
   }
-  std::cout<< "xy_sum" << xy_sum <<"\n";
-  std::cout<< "xx_sum" << xx_sum <<"\n";
-  std::cout << "-------------\n";
+
   float cxy = points.size()*center.x*center.y;
   float cxx = points.size()*center.x*center.x;
   float num = xy_sum - cxy;
@@ -147,8 +142,4 @@ void Utils::initialize_ellipse(pos_vector mj_scaling, pos_vector min_scaling, fl
   e.minor_axis = sqrt(minor_axis_v.x*minor_axis_v.x + minor_axis_v.y*minor_axis_v.y);
   e.rotation = atan(slope) * 180 / PI;
   e.center = center;
-  std::cout <<"major:" << e.major_axis << "\n";
-  std::cout <<"minor:" << e.minor_axis << "\n";
-  std::cout <<"center:" << e.center << "\n";
-  std::cout <<"rot:" << e.rotation << "\n";
 }

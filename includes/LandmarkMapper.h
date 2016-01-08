@@ -23,8 +23,8 @@ class LandmarkMapper{
   public:
     LandmarkMapper();
     LandmarkMapper(dlib::full_object_detection shape);
-    std::map<std::string, std::vector<cv::Point_<float> > > pmap;
-    std::map<std::string, cv::Point_<float> > cmap;
-    std::map<std::string, Axes > pvmap;
+    std::map<std::string, std::vector<cv::Point_<float> > > pmap;//points used to get the regression line
+    std::map<std::string, cv::Point_<float> > cmap;//map containing the center
+    std::map<std::string, Axes > pvmap;//contains position vectors of major and minor axes
 };
 #endif

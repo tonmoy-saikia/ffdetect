@@ -14,10 +14,14 @@
 
 void initialize_parser(dlib::command_line_parser &parser, int argc, char** argv);
 void detect(cv::Mat img, std::string frame);
-std::string get_bounding_ellipse(cv::Mat &image, LandmarkMapper lm, cv::Point marker_loc);
+std::string get_bounding_ellipse(LandmarkMapper lm, cv::Point marker_loc, std::vector<Ellipse> &elps);
+Ellipse get_face_ellipse(LandmarkMapper, float rotation);
 Ellipse interpolate_ellipse(cv::Mat &image, LandmarkMapper lm, std::string type);
-void process_video(std::string filename, int, int);
-CSVLogger logger("logfile");
+void display_results(cv::Mat &image, std::vector<Ellipse> ellipses);
+void process_video(dlib::command_line_parser &parser);
+
+//global variables
+CSVLogger logger("logfile.csv");
 
 int main(int argc, char** argv)
 {
@@ -32,14 +36,7 @@ int main(int argc, char** argv)
       parser.print_options();
       return EXIT_SUCCESS;
     }
-
-
-    std::string filename = get_option(parser, "video", "");//parser.option("video").argument();
-    int start_frame = get_option(parser, "start_frame", 0);//parser.option("video").argument();
-    int end_frame = get_option(parser, "end_frame", -1);//parser.option("video").argument();
-    std::cout << filename;
-    process_video(filename, start_frame, end_frame);
-
+    process_video(parser);
     logger.flush();//flush in batches, may overload the memory if there are large number of frames
   }
   catch(dlib::serialization_error& e)
@@ -59,10 +56,16 @@ int main(int argc, char** argv)
   return 0;
 }
 
-void process_video(std::string filename, int start_frame, int end_frame)
+
+void process_video(dlib::command_line_parser &parser)
 {
+  std::string filename = get_option(parser, "video", "");
+  std::cout << "Processing... "<< filename << std::endl;
+
+  int start_frame, end_frame, framecnt;
   cv::VideoCapture cap;
   cap.set(CV_CAP_PROP_CONVERT_RGB, 1);
+
   bool webcam_mode = filename.length()==0;
   if(webcam_mode)
   {
@@ -71,21 +74,24 @@ void process_video(std::string filename, int start_frame, int end_frame)
   else
   {
     cap.open(filename);
+    framecnt = cap.get(CV_CAP_PROP_FRAME_COUNT);
+    start_frame = get_option(parser, "start_frame", 0);
+    end_frame = get_option(parser, "end_frame", framecnt);
     cap.set(CV_CAP_PROP_POS_FRAMES, start_frame);
-    int framecnt = cap.get(CV_CAP_PROP_FRAME_COUNT);
-    if(end_frame == -1)
-    {
-      end_frame = framecnt;
-    }
-    else
-    {
-      end_frame = end_frame>framecnt ? framecnt:end_frame;
-    }
+    end_frame = end_frame>framecnt ? framecnt:end_frame;
   }
 
-  //int frame_width=   cap.get(CV_CAP_PROP_FRAME_WIDTH);
-  //int frame_height=   cap.get(CV_CAP_PROP_FRAME_HEIGHT);
-  //cv::VideoWriter video("out.avi", static_cast<int>(cap.get(CV_CAP_PROP_FOURCC)) , cap.get(CV_CAP_PROP_FPS), cv::Size(frame_width,frame_height),true);
+  cv::VideoWriter writer_object;
+  if(parser.option("generate"))
+  {
+    int frame_width = cap.get(CV_CAP_PROP_FRAME_WIDTH);
+    int frame_height = cap.get(CV_CAP_PROP_FRAME_HEIGHT);
+    writer_object.open("out.avi",
+                        static_cast<int>(cap.get(CV_CAP_PROP_FOURCC)),
+                        cap.get(CV_CAP_PROP_FPS),
+                        cv::Size(frame_width,frame_height),
+                        true);
+  }
 
   bool facefound = false;
   // Load face detection and pose estimation models.
@@ -105,8 +111,6 @@ void process_video(std::string filename, int start_frame, int end_frame)
   cv::Mat frame, gray_frame;
 
   int count = start_frame;
-  std::cout << count;
-  std::cout << "\n" << end_frame;
   while(webcam_mode || count < end_frame)
   {
     // Grab a frame
@@ -149,68 +153,105 @@ void process_video(std::string filename, int start_frame, int end_frame)
     cv::Point marker_loc = Utils::locateMarker(frame);
 
     dlib::rectangle r = tracker.get_position();
-    rectangle(frame, cv::Rect(cv::Point(r.left(),r.top()), cv::Point(r.right(),r.bottom())), cv::Scalar(255,0,0),1,8,0);
+    cv::Rect frect = cv::Rect(cv::Point(r.left(),r.top()), cv::Point(r.right(),r.bottom()));
+    //rectangle(frame, frect, cv::Scalar(255,0,0),1,8,0);
 
 
     //log extracted data
-
+    std::vector<Ellipse> ellipses;
     if(shape.num_parts()>0)
     {
       LandmarkMapper lm(shape);
-      std::string ml = get_bounding_ellipse(gray_frame, lm, marker_loc);
       logger.addToRow(shape);
-      logger.addToRow("marker_loc", ml);
+      logger.addToRow("marker_loc", get_bounding_ellipse(lm, marker_loc, ellipses));
     }
     if(!webcam_mode)
     {
       logger.addToRow("ts", Utils::toString(cap.get(CV_CAP_PROP_POS_MSEC)));
     }
-
     logger.addToRow("frame_no", Utils::toString(count));
     logger.addToRow("face_rect", tracker.get_position());
     logger.addToRow(marker_loc);
 
-    // display results
-    imshow("disp window", frame);
-    cv::waitKey(10);
+    if(parser.option("display"))
+    {
+      display_results(frame, ellipses);
+    }
+    if(writer_object.isOpened());
+    {
+      writer_object << frame;
+    }
   }
+  cap.release();
+  writer_object.release();
 }
 
+void display_results(cv::Mat &image, std::vector<Ellipse> ellipses)
+{
+  for(int i=0; i<ellipses.size(); i++)
+  {
+    ellipses[i].draw(image);
+  }
+  imshow("disp window", image);
+  cv::waitKey(10);
+}
 
-Ellipse interpolate_ellipse(cv::Mat &image, LandmarkMapper lm, std::string type)
+Ellipse interpolate_ellipse(LandmarkMapper lm, std::string type)
 {
   Ellipse e;
-  Utils::display_pts(image, lm.pmap[type]);
   float slope = Utils::getRegressionLineSlope(lm.pmap[type], lm.cmap[type]);
   Utils::initialize_ellipse(lm.pvmap[type].maj, lm.pvmap[type].min, slope, e, lm.cmap[type]);
-  e.draw(image);
   return e;
 }
 
-std::string get_bounding_ellipse(cv::Mat &image, LandmarkMapper lm, cv::Point marker_loc)
+Ellipse get_face_ellipse(LandmarkMapper lm, float rotation)
 {
-  Ellipse m_elps  = interpolate_ellipse(image, lm, "mouth");
-  Ellipse le_elps  = interpolate_ellipse(image, lm, "l_eye");
-  Ellipse re_elps  = interpolate_ellipse(image, lm, "r_eye");
-  //Ellipse f_elps  = interpolate_ellipse(image, lm, "face");
-  std::string elps_name="";
+  Ellipse e;
+  pos_vec major_axis_v = lm.pvmap["face"].maj;
+  pos_vec minor_axis_v = lm.pvmap["face"].min;
+  e.major_axis = sqrt(major_axis_v.x*major_axis_v.x + major_axis_v.y*major_axis_v.y);
+  e.minor_axis = sqrt(minor_axis_v.x*minor_axis_v.x + minor_axis_v.y*minor_axis_v.y);
+  e.rotation = rotation;
+  e.center = lm.cmap["face"];
+  return e;
 
-  if(m_elps.encloses(marker_loc))
+}
+
+Ellipse get_face_ellipse1(cv::Rect facerect, float rotation)
+{
+  Ellipse e;
+  e.major_axis = facerect.width/2;
+  e.minor_axis = 1.3*facerect.height/2;
+  e.rotation = rotation;
+  e.center = cv::Point(facerect.x + facerect.width*0.5, facerect.y + facerect.height*0.37);
+  return e;
+}
+
+std::string get_bounding_ellipse(LandmarkMapper lm, cv::Point marker_loc, std::vector<Ellipse> &ellipses)
+{
+  Ellipse m_elps  = interpolate_ellipse(lm, "mouth"); ellipses.push_back(m_elps);
+  Ellipse le_elps  = interpolate_ellipse(lm, "l_eye"); ellipses.push_back(le_elps);
+  Ellipse re_elps  = interpolate_ellipse(lm, "r_eye"); ellipses.push_back(re_elps);
+  Ellipse f_elps  = get_face_ellipse(lm, m_elps.rotation); ellipses.push_back(f_elps);
+
+  std::string elps_name="";
+  if(f_elps.encloses(marker_loc))
   {
-    elps_name = "m";
+    if(m_elps.encloses(marker_loc))
+    {
+      elps_name = "m";
+    }else if(le_elps.encloses(marker_loc))
+    {
+      elps_name = "le";
+    }else if(re_elps.encloses(marker_loc))
+    {
+      elps_name = "re";
+    }
+    else
+    {
+      elps_name = "f";
+    }
   }
-  if(le_elps.encloses(marker_loc))
-  {
-    elps_name = "le";
-  }
-  if(re_elps.encloses(marker_loc))
-  {
-    elps_name = "re";
-  }
-  //if(f_elps.encloses(marker_loc))
-  //{
-  // elps_name = "f";
-  //}
   return elps_name;
 }
 
@@ -218,16 +259,15 @@ void initialize_parser(dlib::command_line_parser &parser, int argc, char** argv)
 {
   parser.add_option("h", "Display this help message.");
   parser.add_option("video", "Input video file for processing", 1);
-  parser.add_option("webcam", "Use webcam as video source");
   parser.add_option("start_frame", "start frame number number for video", 1);
   parser.add_option("end_frame", "end frame number for video", 1);
   parser.add_option("image", "Process a single image", 1);
   parser.add_option("display", "Display processed images");
-  parser.add_option("generate", "Generate output video with region of interests",1);
+  parser.add_option("generate", "Generate output video with region of interests");
 
   parser.parse(argc, argv);
-  const char* one_time_opts[] = {"h", "video", "webcam", "start_frame", "end_frame", "image", "display", "generate"};
+  const char* one_time_opts[] = {"h", "video", "start_frame", "end_frame", "image", "display", "generate"};
   parser.check_one_time_options(one_time_opts); // Can't give an option more than once
-  const char* incompatible[] = {"video", "webcam", "image"};
+  const char* incompatible[] = {"video", "image"};
   parser.check_incompatible_options(incompatible);
 }
