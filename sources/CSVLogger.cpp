@@ -22,13 +22,13 @@ void CSVLogger::set_header_order()
   {
     std::string part_name = "l" + Utils::toString(i);
     header_order.push_back(part_name + "_x");
-	header_order.push_back(part_name + "_y");
+	  header_order.push_back(part_name + "_y");
   }
-  std::string ellipse_types[] = {"elps_mouth", "elps_leye", "elps_reye", "elps_face"};
+  std::string ellipse_types[] = {"elps_mouth", "elps_l_eye", "elps_r_eye", "elps_face"};
   for(int i=0; i<4; i++)
   {
-	header_order.push_back(ellipse_types[i] + "_x");
-	header_order.push_back(ellipse_types[i] + "_y");
+    header_order.push_back(ellipse_types[i] + "_x");
+    header_order.push_back(ellipse_types[i] + "_y");
   }
 
   header_order.push_back("marker_loc");
@@ -71,10 +71,10 @@ void CSVLogger::addToRow(std::string name, cv::Point p)
 
 void CSVLogger::addToRow(std::string r_name, dlib::rectangle value)
 {
-    addToRow(r_name + "_x1", Utils::toString(value.left()));
-	addToRow(r_name + "_y1", Utils::toString(value.top()));
-	addToRow(r_name + "_x2", Utils::toString(value.right()));
-	addToRow(r_name + "_y2", Utils::toString(value.bottom()));
+  addToRow(r_name + "_x1", Utils::toString(value.left()));
+  addToRow(r_name + "_y1", Utils::toString(value.top()));
+  addToRow(r_name + "_x2", Utils::toString(value.right()));
+  addToRow(r_name + "_y2", Utils::toString(value.bottom()));
 }
 
 
@@ -89,9 +89,9 @@ void CSVLogger::addToRow(dlib::full_object_detection shape)
   }
 }
 
-void CSVLogger::addToRow(std::string name, EllipseROI eroi)
+void CSVLogger::addToRow(EllipseROI eroi)
 {
-	addToRow(name, eroi.center);
+	addToRow("elps_" + eroi.type, eroi.center);
 }
 void CSVLogger::flush()
 {

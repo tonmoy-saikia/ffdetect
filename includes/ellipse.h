@@ -6,9 +6,8 @@
 
 class EllipseROI{
   public:
-	std::string name;
-	EllipseROI();
-	EllipseROI(std::string t);
+    std::string type;
+    EllipseROI(std::string t);
     float major_axis, minor_axis, rotation;
     cv::Point_<float> center;
     void draw(cv::Mat &);

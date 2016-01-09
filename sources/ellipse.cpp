@@ -1,9 +1,7 @@
 #include "../includes/ellipse.h"
 
-EllipseROI::EllipseROI(){}
-
 EllipseROI::EllipseROI(std::string t){
-	name = t;
+	type = t;
 }
 
 bool EllipseROI::encloses(cv::Point pt)

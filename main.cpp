@@ -2,7 +2,6 @@
 #include "includes/Utils.h"
 #include "includes/LandmarkMapper.h"
 #include <fstream>
-#include <conio.h>
 #include <iostream>
 #include <vector>
 #include <dlib/opencv.h>
@@ -18,7 +17,7 @@ void detect(cv::Mat img, std::string frame);
 std::string get_bounding_ellipse(LandmarkMapper lm, cv::Point marker_loc, std::vector<EllipseROI> &elps);
 EllipseROI get_face_ellipse(LandmarkMapper, float rotation);
 EllipseROI interpolate_ellipse(cv::Mat &image, LandmarkMapper lm, std::string type);
-void display_results(cv::Mat &image, std::vector<EllipseROI> ellipses);
+void draw(cv::Mat &image, std::vector<EllipseROI> ellipses);
 void process_video(dlib::command_line_parser &parser);
 
 //global variables
@@ -87,8 +86,9 @@ void process_video(dlib::command_line_parser &parser)
   {
     int frame_width = cap.get(CV_CAP_PROP_FRAME_WIDTH);
     int frame_height = cap.get(CV_CAP_PROP_FRAME_HEIGHT);
+    int codec = CV_FOURCC('M', 'J', 'P', 'G');
     writer_object.open("out.avi",
-                        static_cast<int>(cap.get(CV_CAP_PROP_FOURCC)),
+                        codec,
                         cap.get(CV_CAP_PROP_FPS),
                         cv::Size(frame_width,frame_height),
                         true);
@@ -142,14 +142,12 @@ void process_video(dlib::command_line_parser &parser)
         facefound = true;
         tracker.start_track(dimg, centered_rect(faces[0], faces[0].width(), faces[0].height()));
         shape = pose_model(dimg, tracker.get_position());
-        std::cout << "Refreshing..." << std::endl;
       }
     }
     else
     {
       tracker.update(dimg);
       shape = pose_model(dimg, tracker.get_position());
-      std::cout << "Tracking..." << std::endl;
     }
     cv::Point marker_loc = Utils::locateMarker(frame);
 
@@ -164,42 +162,50 @@ void process_video(dlib::command_line_parser &parser)
       LandmarkMapper lm(shape);
       logger.addToRow(shape);
       logger.addToRow("marker_loc", get_bounding_ellipse(lm, marker_loc, ellipses));
+      for(int i=0; i<ellipses.size(); i++)
+      {
+        logger.addToRow(ellipses[i]);
+      }
     }
     if(!webcam_mode)
     {
       logger.addToRow("ts", Utils::toString(cap.get(CV_CAP_PROP_POS_MSEC)));
-	  logger.addToRow("marker_coord", marker_loc);
+      logger.addToRow("marker_coord", marker_loc);
     }
+
     logger.addToRow("frame_no", Utils::toString(count));
     logger.addToRow("face_rect", tracker.get_position());
-    
+
     if(parser.option("display"))
     {
-      display_results(frame, ellipses);
+      draw(frame, ellipses);
+      imshow("disp window", frame);
     }
     if(writer_object.isOpened())
     {
+      draw(frame, ellipses);
       writer_object << frame;
     }
-	char keypress = cv::waitKey(10);
-	
-	if(keypress == 'q')
-	{
-		std::cout << "Terminated!";
-		break;
-	}
+    char keypress = cv::waitKey(10);
+    if(keypress == 'q')
+    {
+      std::cout << "Terminated!";
+      break;
+    }
+    std::cout << "Processed " << count-start_frame << " out of "<<end_frame - start_frame << " frames\r";
+    std::cout.flush();
   }
+  std::cout << std::endl;
   cap.release();
   writer_object.release();
 }
 
-void display_results(cv::Mat &image, std::vector<EllipseROI> ellipses)
+void draw(cv::Mat &image, std::vector<EllipseROI> ellipses)
 {
   for(int i=0; i<ellipses.size(); i++)
   {
     ellipses[i].draw(image);
   }
-  imshow("disp window", image);
 }
 
 EllipseROI interpolate_ellipse(LandmarkMapper lm, std::string type)
@@ -223,15 +229,6 @@ EllipseROI get_face_ellipse(LandmarkMapper lm, float rotation)
 
 }
 
-EllipseROI get_face_ellipse1(cv::Rect facerect, float rotation)
-{
-  EllipseROI e;
-  e.major_axis = facerect.width/2;
-  e.minor_axis = 1.3*facerect.height/2;
-  e.rotation = rotation;
-  e.center = cv::Point(facerect.x + facerect.width*0.5, facerect.y + facerect.height*0.37);
-  return e;
-}
 
 std::string get_bounding_ellipse(LandmarkMapper lm, cv::Point marker_loc, std::vector<EllipseROI> &ellipses)
 {
@@ -278,7 +275,7 @@ void initialize_parser(dlib::command_line_parser &parser, int argc, char** argv)
   parser.add_option("generate", "Generate output video with region of interests");
 
   parser.parse(argc, argv);
-  const char* one_time_opts[] = {"h", "video", "start_frame", "end_frame", "image", "display", "generate", "refresh_interval"};
+  const char* one_time_opts[] = {"h", "video", "start_frame", "end_frame", "display", "generate", "refresh_interval"};
   parser.check_one_time_options(one_time_opts); // Can't give an option more than once
   //const char* incompatible[] = {"video", "image"};
   //parser.check_incompatible_options(incompatible);

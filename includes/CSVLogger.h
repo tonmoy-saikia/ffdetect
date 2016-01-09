@@ -22,7 +22,7 @@ class CSVLogger
     void addToRow(std::string r_name, dlib::rectangle value);
     void addToRow(dlib::full_object_detection shape);
     void addToRow(std::string, cv::Point p);
-	void addToRow(std::string name, EllipseROI eroi);
+	  void addToRow(EllipseROI eroi);
     void flush();
 };
 #endif
