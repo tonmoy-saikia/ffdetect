@@ -31,50 +31,6 @@ cv::Point Utils::locateMarker(cv::Mat clrImg)
   return mCoord;
 }
 
-cv::Point Utils::getGlobalMarkerPos(cv::Point lpos, cv::Rect r)
-{
-  return cv::Point(lpos.x + r.x, lpos.y + r.y);
-}
-
-cv::Rect Utils::getROI(cv::Rect frect, char type)
-{
-  cv::Rect rect;
-  if(type == 'm')
-  {
-    rect = cv::Rect(frect.x,
-        (int)(frect.y + frect.height*0.6666),
-        frect.width,
-        (int)(frect.height/3));
-  }
-  else if(type == 'n')
-  {
-
-    rect = cv::Rect(frect.x,
-        (int)(frect.y + frect.height*0.3),
-        frect.width,
-        (int)(frect.height*0.666));
-  }
-  else if(type == 'e')
-  {
-    rect = cv::Rect(frect.x,
-        (int)(frect.y + frect.height*0.1),
-        frect.width,
-        (int)(frect.height/2));
-  }
-  else
-  {
-    throw std::invalid_argument("Invalid type for roi. Valid types are m,n,e");
-  }
-  return rect;
-}
-
-void Utils::printMarkerLocation(cv::Rect rect, cv::Point loc, std::string type)
-{
-  if(rect.contains(loc))
-  {
-    std::cout<< "Marker in "<<type << "\n";
-  }
-}
 
 cv::Point_<float> Utils::get_center_pt(std::vector< cv::Point_<float> > points)
 {
@@ -121,7 +77,7 @@ pos_vector Utils::get_pv(cv::Point_<float> p1, cv::Point_<float> p2)
   return p2 - p1;
 }
 
-void Utils::initialize_ellipse(pos_vector mj_scaling, pos_vector min_scaling, float slope, Ellipse &e, cv::Point_<float> center)
+void Utils::initialize_ellipse(pos_vector mj_scaling, pos_vector min_scaling, float slope, EllipseROI &e, cv::Point_<float> center)
 {
   pos_vector major_axis_v, minor_axis_v;
   major_axis_v = pos_vector(sqrt(mj_scaling.x*mj_scaling.x + mj_scaling.y*mj_scaling.y),

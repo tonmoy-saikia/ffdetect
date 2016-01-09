@@ -5,7 +5,7 @@
 #include <map>
 #include <dlib/image_processing.h>
 #include <opencv2/imgproc/imgproc.hpp>
-
+#include "ellipse.h"
 class CSVLogger
 {
   protected:
@@ -21,7 +21,8 @@ class CSVLogger
     void addToRow(std::string key, std::string value);
     void addToRow(std::string r_name, dlib::rectangle value);
     void addToRow(dlib::full_object_detection shape);
-    void addToRow(cv::Point p);
+    void addToRow(std::string, cv::Point p);
+	void addToRow(std::string name, EllipseROI eroi);
     void flush();
 };
 #endif

@@ -2,6 +2,7 @@
 #include "includes/Utils.h"
 #include "includes/LandmarkMapper.h"
 #include <fstream>
+#include <conio.h>
 #include <iostream>
 #include <vector>
 #include <dlib/opencv.h>
@@ -14,10 +15,10 @@
 
 void initialize_parser(dlib::command_line_parser &parser, int argc, char** argv);
 void detect(cv::Mat img, std::string frame);
-std::string get_bounding_ellipse(LandmarkMapper lm, cv::Point marker_loc, std::vector<Ellipse> &elps);
-Ellipse get_face_ellipse(LandmarkMapper, float rotation);
-Ellipse interpolate_ellipse(cv::Mat &image, LandmarkMapper lm, std::string type);
-void display_results(cv::Mat &image, std::vector<Ellipse> ellipses);
+std::string get_bounding_ellipse(LandmarkMapper lm, cv::Point marker_loc, std::vector<EllipseROI> &elps);
+EllipseROI get_face_ellipse(LandmarkMapper, float rotation);
+EllipseROI interpolate_ellipse(cv::Mat &image, LandmarkMapper lm, std::string type);
+void display_results(cv::Mat &image, std::vector<EllipseROI> ellipses);
 void process_video(dlib::command_line_parser &parser);
 
 //global variables
@@ -29,7 +30,6 @@ int main(int argc, char** argv)
   {
     dlib::command_line_parser parser;
     initialize_parser(parser, argc, argv);
-    std::cout << parser.number_of_arguments() << "\n";
     if(parser.option("h"))
     {
       std::cout << "Usage: ffdetect [options] <video|image file>" << std::endl;
@@ -61,8 +61,9 @@ void process_video(dlib::command_line_parser &parser)
 {
   std::string filename = get_option(parser, "video", "");
   std::cout << "Processing... "<< filename << std::endl;
-
+  int refresh_interval = get_option(parser, "refresh_interval", 20);
   int start_frame, end_frame, framecnt;
+
   cv::VideoCapture cap;
   cap.set(CV_CAP_PROP_CONVERT_RGB, 1);
 
@@ -133,7 +134,7 @@ void process_video(dlib::command_line_parser &parser)
     //dlib::cv_image<dlib::bgr_pixel> cimg(temp);
 
     // Detect faces
-    if(!facefound || count%20==0)
+    if(!facefound || count%refresh_interval==0)
     {
       faces = detector(dimg);
       if(faces.size()>0)
@@ -156,9 +157,8 @@ void process_video(dlib::command_line_parser &parser)
     cv::Rect frect = cv::Rect(cv::Point(r.left(),r.top()), cv::Point(r.right(),r.bottom()));
     //rectangle(frame, frect, cv::Scalar(255,0,0),1,8,0);
 
-
     //log extracted data
-    std::vector<Ellipse> ellipses;
+    std::vector<EllipseROI> ellipses;
     if(shape.num_parts()>0)
     {
       LandmarkMapper lm(shape);
@@ -168,45 +168,51 @@ void process_video(dlib::command_line_parser &parser)
     if(!webcam_mode)
     {
       logger.addToRow("ts", Utils::toString(cap.get(CV_CAP_PROP_POS_MSEC)));
+	  logger.addToRow("marker_coord", marker_loc);
     }
     logger.addToRow("frame_no", Utils::toString(count));
     logger.addToRow("face_rect", tracker.get_position());
-    logger.addToRow(marker_loc);
-
+    
     if(parser.option("display"))
     {
       display_results(frame, ellipses);
     }
-    if(writer_object.isOpened());
+    if(writer_object.isOpened())
     {
       writer_object << frame;
     }
+	char keypress = cv::waitKey(10);
+	
+	if(keypress == 'q')
+	{
+		std::cout << "Terminated!";
+		break;
+	}
   }
   cap.release();
   writer_object.release();
 }
 
-void display_results(cv::Mat &image, std::vector<Ellipse> ellipses)
+void display_results(cv::Mat &image, std::vector<EllipseROI> ellipses)
 {
   for(int i=0; i<ellipses.size(); i++)
   {
     ellipses[i].draw(image);
   }
   imshow("disp window", image);
-  cv::waitKey(10);
 }
 
-Ellipse interpolate_ellipse(LandmarkMapper lm, std::string type)
+EllipseROI interpolate_ellipse(LandmarkMapper lm, std::string type)
 {
-  Ellipse e;
+  EllipseROI e(type);
   float slope = Utils::getRegressionLineSlope(lm.pmap[type], lm.cmap[type]);
   Utils::initialize_ellipse(lm.pvmap[type].maj, lm.pvmap[type].min, slope, e, lm.cmap[type]);
   return e;
 }
 
-Ellipse get_face_ellipse(LandmarkMapper lm, float rotation)
+EllipseROI get_face_ellipse(LandmarkMapper lm, float rotation)
 {
-  Ellipse e;
+  EllipseROI e("face");
   pos_vec major_axis_v = lm.pvmap["face"].maj;
   pos_vec minor_axis_v = lm.pvmap["face"].min;
   e.major_axis = sqrt(major_axis_v.x*major_axis_v.x + major_axis_v.y*major_axis_v.y);
@@ -217,9 +223,9 @@ Ellipse get_face_ellipse(LandmarkMapper lm, float rotation)
 
 }
 
-Ellipse get_face_ellipse1(cv::Rect facerect, float rotation)
+EllipseROI get_face_ellipse1(cv::Rect facerect, float rotation)
 {
-  Ellipse e;
+  EllipseROI e;
   e.major_axis = facerect.width/2;
   e.minor_axis = 1.3*facerect.height/2;
   e.rotation = rotation;
@@ -227,14 +233,19 @@ Ellipse get_face_ellipse1(cv::Rect facerect, float rotation)
   return e;
 }
 
-std::string get_bounding_ellipse(LandmarkMapper lm, cv::Point marker_loc, std::vector<Ellipse> &ellipses)
+std::string get_bounding_ellipse(LandmarkMapper lm, cv::Point marker_loc, std::vector<EllipseROI> &ellipses)
 {
-  Ellipse m_elps  = interpolate_ellipse(lm, "mouth"); ellipses.push_back(m_elps);
-  Ellipse le_elps  = interpolate_ellipse(lm, "l_eye"); ellipses.push_back(le_elps);
-  Ellipse re_elps  = interpolate_ellipse(lm, "r_eye"); ellipses.push_back(re_elps);
-  Ellipse f_elps  = get_face_ellipse(lm, m_elps.rotation); ellipses.push_back(f_elps);
+  EllipseROI m_elps  = interpolate_ellipse(lm, "mouth"); ellipses.push_back(m_elps);
+  EllipseROI le_elps  = interpolate_ellipse(lm, "l_eye"); ellipses.push_back(le_elps);
+  EllipseROI re_elps  = interpolate_ellipse(lm, "r_eye"); ellipses.push_back(re_elps);
+  EllipseROI f_elps  = get_face_ellipse(lm, m_elps.rotation); ellipses.push_back(f_elps);
 
   std::string elps_name="";
+  if(marker_loc != cv::Point(0,0))
+  {
+	  elps_name="p";
+  }
+
   if(f_elps.encloses(marker_loc))
   {
     if(m_elps.encloses(marker_loc))
@@ -258,16 +269,17 @@ std::string get_bounding_ellipse(LandmarkMapper lm, cv::Point marker_loc, std::v
 void initialize_parser(dlib::command_line_parser &parser, int argc, char** argv)
 {
   parser.add_option("h", "Display this help message.");
-  parser.add_option("video", "Input video file for processing", 1);
+  parser.add_option("video", "Input video file for processing (skipping this option will start webcam)", 1);
+  parser.add_option("refresh_interval", "The number of frames to inerleave tracking and detecting (default 20)", 1);
   parser.add_option("start_frame", "start frame number number for video", 1);
   parser.add_option("end_frame", "end frame number for video", 1);
-  parser.add_option("image", "Process a single image", 1);
+  //parser.add_option("image", "Process a single image", 1);
   parser.add_option("display", "Display processed images");
   parser.add_option("generate", "Generate output video with region of interests");
 
   parser.parse(argc, argv);
-  const char* one_time_opts[] = {"h", "video", "start_frame", "end_frame", "image", "display", "generate"};
+  const char* one_time_opts[] = {"h", "video", "start_frame", "end_frame", "image", "display", "generate", "refresh_interval"};
   parser.check_one_time_options(one_time_opts); // Can't give an option more than once
-  const char* incompatible[] = {"video", "image"};
-  parser.check_incompatible_options(incompatible);
+  //const char* incompatible[] = {"video", "image"};
+  //parser.check_incompatible_options(incompatible);
 }

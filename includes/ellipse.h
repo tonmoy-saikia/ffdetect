@@ -1,11 +1,16 @@
-#ifndef ELLIPSE
-#define ELLIPSE
+#ifndef ELLIPSE_H
+#define ELLIPSE_H
+
+#include <string.h>
 #include <opencv2/core/core.hpp>
-class Ellipse{
+
+class EllipseROI{
   public:
+	std::string name;
+	EllipseROI();
+	EllipseROI(std::string t);
     float major_axis, minor_axis, rotation;
     cv::Point_<float> center;
-    Ellipse();
     void draw(cv::Mat &);
     bool encloses(cv::Point);
 };

@@ -13,14 +13,27 @@ void CSVLogger::set_header_order()
 {
   header_order.push_back("frame_no");
   header_order.push_back("ts");
-  header_order.push_back("face_rect");
+  header_order.push_back("face_rect_x1");
+  header_order.push_back("face_rect_y1");
+  header_order.push_back("face_rect_x2");
+  header_order.push_back("face_rect_y2");
+
   for(int i=1; i<=68; i++)
   {
     std::string part_name = "l" + Utils::toString(i);
-    header_order.push_back(part_name);
+    header_order.push_back(part_name + "_x");
+	header_order.push_back(part_name + "_y");
   }
+  std::string ellipse_types[] = {"elps_mouth", "elps_leye", "elps_reye", "elps_face"};
+  for(int i=0; i<4; i++)
+  {
+	header_order.push_back(ellipse_types[i] + "_x");
+	header_order.push_back(ellipse_types[i] + "_y");
+  }
+
   header_order.push_back("marker_loc");
-  header_order.push_back("marker_coord");
+  header_order.push_back("marker_coord_x");
+  header_order.push_back("marker_coord_y");
 }
 
 void CSVLogger::create_default_row()
@@ -50,18 +63,18 @@ void CSVLogger::addToRow(std::string key, std::string value)
   }
 }
 
-void CSVLogger::addToRow(cv::Point p)
+void CSVLogger::addToRow(std::string name, cv::Point p)
 {
-  addToRow("marker_coord", Utils::toString(p.x) + ";" + Utils::toString(p.y));
+  addToRow(name + "_x", Utils::toString(p.x));
+  addToRow(name + "_y", Utils::toString(p.y));
 }
 
 void CSVLogger::addToRow(std::string r_name, dlib::rectangle value)
 {
-    std::string val = Utils::toString(value.left()) + ";"+
-                      Utils::toString(value.top()) + ";" +
-                      Utils::toString(value.right()) + ";"+
-                      Utils::toString(value.bottom());
-    addToRow(r_name, val);
+    addToRow(r_name + "_x1", Utils::toString(value.left()));
+	addToRow(r_name + "_y1", Utils::toString(value.top()));
+	addToRow(r_name + "_x2", Utils::toString(value.right()));
+	addToRow(r_name + "_y2", Utils::toString(value.bottom()));
 }
 
 
@@ -69,12 +82,17 @@ void CSVLogger::addToRow(dlib::full_object_detection shape)
 {
   for(int i=0; i<shape.num_parts();i++)
   {
-    std::string key = "l" + Utils::toString(i+1);
-    std::string val = Utils::toString(shape.part(i).x()) + ";" + Utils::toString(shape.part(i).y());
-    addToRow(key, val);
+    std::string lx = "l" + Utils::toString(i+1) + "_x";
+	std::string ly = "l" + Utils::toString(i+1) + "_y";
+	addToRow(lx, Utils::toString(shape.part(i).x()));
+	addToRow(ly, Utils::toString(shape.part(i).y()));
   }
 }
 
+void CSVLogger::addToRow(std::string name, EllipseROI eroi)
+{
+	addToRow(name, eroi.center);
+}
 void CSVLogger::flush()
 {
   std::string val, out_str;
