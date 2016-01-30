@@ -2,7 +2,7 @@
 #include "../includes/Utils.h"
 #include <algorithm>
 
-CSVLogger::CSVLogger(const char* filename)
+CSVLogger::CSVLogger(std::string filename)
 {
   fobj.open(filename);
   set_header_order();

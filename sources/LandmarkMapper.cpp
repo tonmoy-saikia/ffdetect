@@ -49,7 +49,7 @@ LandmarkMapper::LandmarkMapper(dlib::full_object_detection sh)
                             cv::Point_<float>(shape.part(24).x(), shape.part(24).y()));
 
   Axes ax;
-  ax.maj = Utils::get_pv( cv::Point_<float>(shape.part(0).x(), shape.part(0).y()), cv::Point_<float>(shape.part(16).x(), shape.part(16).y()))*0.5;
+  ax.maj = Utils::get_pv( cv::Point_<float>(shape.part(0).x(), shape.part(0).y()), cv::Point_<float>(shape.part(16).x(), shape.part(16).y()))*0.55;
   ax.min = Utils::get_pv( cv::Point_<float>(shape.part(29).x(), shape.part(29).y()), cv::Point_<float>(shape.part(8).x(), shape.part(8).y()));
   pvmap["face"] = ax ;
 

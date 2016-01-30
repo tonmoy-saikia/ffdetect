@@ -16,7 +16,7 @@ class CSVLogger
     void create_default_row();
     void set_header_order();
   public:
-    CSVLogger(const char*);
+    CSVLogger(std::string);
     void newRow();
     void addToRow(std::string key, std::string value);
     void addToRow(std::string r_name, dlib::rectangle value);
