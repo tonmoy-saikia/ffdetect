@@ -4,7 +4,7 @@
 
 CSVLogger::CSVLogger(std::string filename)
 {
-  fobj.open(filename);
+  fobj.open(filename.c_str());
   set_header_order();
   create_default_row();
 }
