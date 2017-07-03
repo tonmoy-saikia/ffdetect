@@ -1,4 +1,4 @@
 # ffdetect
 
-A C++ application to detect facial features using OpenCV.
+A C++ application for tracking and detecting facial features.
 

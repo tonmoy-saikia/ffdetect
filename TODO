@@ -1,9 +1,0 @@
-1. closed eyes not detected
-2. need to check region of interest rectangle sizes - the ROIs shouldn't vary too much in subsequent frames, gregor suggested calculating
-moving averages for rectangle sizes
-3. check usage of kalman flter for face tracking - this should improve cases where faces are undetected
-4. may be there is a better way to get the positions of face, mouth and nose ROIs
-5. need to check how to detect tilted faces
-6. also need to tag marker coords, outside face ROI: outside face, inside face but not on any feature, marker not found. Also need to tag a frame with 
-face not found.
-7. Try opencv template matching
